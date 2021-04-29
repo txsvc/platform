@@ -11,7 +11,7 @@ func TestInitDefaultPlatform(t *testing.T) {
 	assert.NotNil(t, platform)
 	assert.NotNil(t, platform.providers)
 	assert.NotNil(t, platform.logger)
-	assert.Equal(t, 2, len(platform.providers))
+	assert.Equal(t, 3, len(platform.providers))
 }
 
 func TestInitPlatformNoProviders(t *testing.T) {

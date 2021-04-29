@@ -3,19 +3,12 @@ package platform
 import (
 	"context"
 	"log"
+	"net/http"
 
-	//"github.com/txsvc/platform/errorreporting"
-	//"github.com/txsvc/platform/logging"
 	"github.com/txsvc/platform/provider/local"
 )
 
 type (
-	/*
-		HttpRequestContext interface {
-			NewHttpContext(echo.Context) context.Context
-		}
-	*/
-
 	LoggingProvider interface {
 		Log(string, ...interface{})
 	}
@@ -24,20 +17,25 @@ type (
 		ReportError(error)
 	}
 
-	ProviderType     int
-	InstanceProvider func(string) interface{}
-
-	Platform struct {
-		logger        map[string]LoggingProvider
-		errorReporter ErrorReportingProvider
-
-		providers map[ProviderType]PlatformOpts
+	HttpRequestContextProvider interface {
+		NewHttpContext(*http.Request) context.Context
 	}
+
+	ProviderType         int
+	InstanceProviderFunc func(string) interface{}
 
 	PlatformOpts struct {
 		ID   string
 		Type ProviderType
-		Impl InstanceProvider
+		Impl InstanceProviderFunc
+	}
+
+	Platform struct {
+		logger        map[string]LoggingProvider
+		errorReporter ErrorReportingProvider
+		httpContext   HttpRequestContextProvider
+
+		providers map[ProviderType]PlatformOpts
 	}
 )
 
@@ -54,8 +52,9 @@ var (
 func init() {
 	dl := PlatformOpts{ID: "platform.logger.default", Type: ProviderTypeLogger, Impl: local.NewDefaultLogger}
 	er := PlatformOpts{ID: "platform.errorreporting.default", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReporter}
+	cx := PlatformOpts{ID: "platform.context.default", Type: ProviderTypeHttpContext, Impl: local.NewDefaultContextProvider}
 
-	p, err := InitPlatform(context.TODO(), dl, er)
+	p, err := InitPlatform(context.TODO(), dl, er, cx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,6 +90,8 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 		switch opt.Type {
 		case ProviderTypeErrorReporter:
 			p.errorReporter = opt.Impl(opt.ID).(ErrorReportingProvider)
+		case ProviderTypeHttpContext:
+			p.httpContext = opt.Impl(opt.ID).(HttpRequestContextProvider)
 		}
 	}
 	return &p, nil
@@ -120,4 +121,8 @@ func Logger(logID string) LoggingProvider {
 
 func ReportError(e error) {
 	platform.errorReporter.ReportError(e)
+}
+
+func NewHttpContext(req *http.Request) context.Context {
+	return platform.httpContext.NewHttpContext(req)
 }
