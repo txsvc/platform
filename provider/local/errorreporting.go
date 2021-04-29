@@ -1,4 +1,4 @@
-package errorreporting
+package local
 
 import (
 	"log"
@@ -7,10 +7,6 @@ import (
 )
 
 type (
-	ErrorReportingProvider interface {
-		ReportError(error)
-	}
-
 	ErrorReporter struct {
 		log *zap.SugaredLogger
 	}

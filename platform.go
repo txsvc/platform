@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/txsvc/platform/errorreporting"
-	"github.com/txsvc/platform/logging"
+	//"github.com/txsvc/platform/errorreporting"
+	//"github.com/txsvc/platform/logging"
+	"github.com/txsvc/platform/provider/local"
 )
 
 type (
@@ -15,12 +16,20 @@ type (
 		}
 	*/
 
+	LoggingProvider interface {
+		Log(string, ...interface{})
+	}
+
+	ErrorReportingProvider interface {
+		ReportError(error)
+	}
+
 	ProviderType     int
 	InstanceProvider func(string) interface{}
 
 	Platform struct {
-		logger        map[string]logging.LoggingProvider
-		errorReporter errorreporting.ErrorReportingProvider
+		logger        map[string]LoggingProvider
+		errorReporter ErrorReportingProvider
 
 		providers map[ProviderType]PlatformOpts
 	}
@@ -43,8 +52,8 @@ var (
 )
 
 func init() {
-	dl := PlatformOpts{ID: "platform.logger.default", Type: ProviderTypeLogger, Impl: logging.NewDefaultLogger}
-	er := PlatformOpts{ID: "platform.errorreporting.default", Type: ProviderTypeErrorReporter, Impl: errorreporting.NewDefaultErrorReporter}
+	dl := PlatformOpts{ID: "platform.logger.default", Type: ProviderTypeLogger, Impl: local.NewDefaultLogger}
+	er := PlatformOpts{ID: "platform.errorreporting.default", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReporter}
 
 	p, err := InitPlatform(context.TODO(), dl, er)
 	if err != nil {
@@ -69,7 +78,7 @@ func (l ProviderType) String() string {
 
 func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) {
 	p := Platform{
-		logger:    make(map[string]logging.LoggingProvider),
+		logger:    make(map[string]LoggingProvider),
 		providers: make(map[ProviderType]PlatformOpts),
 	}
 
@@ -81,7 +90,7 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 
 		switch opt.Type {
 		case ProviderTypeErrorReporter:
-			p.errorReporter = opt.Impl(opt.ID).(*errorreporting.ErrorReporter)
+			p.errorReporter = opt.Impl(opt.ID).(ErrorReportingProvider)
 		}
 	}
 	return &p, nil
@@ -96,14 +105,14 @@ func RegisterPlatform(p *Platform) *Platform {
 	return old
 }
 
-func Logger(logID string) logging.LoggingProvider {
+func Logger(logID string) LoggingProvider {
 	l, ok := platform.logger[logID]
 	if !ok {
 		opt, ok := platform.providers[ProviderTypeLogger]
 		if !ok {
 			return nil
 		}
-		l = opt.Impl(logID).(*logging.Logger)
+		l = opt.Impl(logID).(LoggingProvider)
 		platform.logger[logID] = l
 	}
 	return l

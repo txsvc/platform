@@ -1,20 +1,8 @@
-package logging
+package local
 
 import (
+	//"github.com/txsvc/platform/logging"
 	"go.uber.org/zap"
-)
-
-type (
-	Severity int
-
-	LoggingProvider interface {
-		Log(string, ...interface{})
-	}
-
-	Logger struct {
-		Lvl Severity
-		log *zap.SugaredLogger
-	}
 )
 
 const (
@@ -24,21 +12,14 @@ const (
 	Debug
 )
 
-// Returns the name of a Severity level
-func (l Severity) String() string {
-	switch l {
-	case Info:
-		return "info"
-	case Warn:
-		return "warn"
-	case Error:
-		return "error"
-	case Debug:
-		return "debug"
-	default:
-		panic("unsupported level")
+type (
+	Severity int
+
+	Logger struct {
+		Lvl Severity
+		log *zap.SugaredLogger
 	}
-}
+)
 
 // the default logger implementation
 
