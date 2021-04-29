@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/txsvc/spa/pkg/env"
+	"github.com/txsvc/platform/pkg/env"
 )
 
 const (
@@ -79,5 +79,4 @@ func (s *server) StartBlocking() {
 	// start the server
 	port := fmt.Sprintf(":%s", env.GetString("PORT", "8080"))
 	s.mux.Logger.Fatal(s.mux.Start(port))
-
 }
