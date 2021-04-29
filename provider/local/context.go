@@ -14,6 +14,6 @@ func NewDefaultContextProvider(ID string) interface{} {
 	return &DefaultContext{}
 }
 
-func (c *DefaultContext) NewHttpContext(*http.Request) context.Context {
-	return context.TODO()
+func (c *DefaultContext) NewHttpContext(req *http.Request) context.Context {
+	return context.Background()
 }
