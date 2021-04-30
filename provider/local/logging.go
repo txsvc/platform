@@ -30,19 +30,38 @@ func NewDefaultLoggingProvider(ID string) interface{} {
 	return &logger
 }
 
-func (l *Logger) Log(msg string, keyValuePairs ...interface{}) {
+func (l *Logger) Log(msg string, keyValuePairs ...string) {
 	l.LogWithLevel(l.lvl, msg, keyValuePairs...)
 }
 
-func (l *Logger) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...interface{}) {
-	switch lvl {
-	case logging.Info:
-		l.log.Infow(msg, keyValuePairs...)
-	case logging.Warn:
-		l.log.Warnw(msg, keyValuePairs...)
-	case logging.Error:
-		l.log.Errorw(msg, keyValuePairs...)
-	case logging.Debug:
-		l.log.Debugw(msg, keyValuePairs...)
+func (l *Logger) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...string) {
+
+	if len(keyValuePairs) > 0 {
+		params := make([]interface{}, len(keyValuePairs))
+		for i := range keyValuePairs {
+			params[i] = keyValuePairs[i]
+		}
+
+		switch lvl {
+		case logging.Info:
+			l.log.Infow(msg, params...)
+		case logging.Warn:
+			l.log.Warnw(msg, params...)
+		case logging.Error:
+			l.log.Errorw(msg, params...)
+		case logging.Debug:
+			l.log.Debugw(msg, params...)
+		}
+	} else {
+		switch lvl {
+		case logging.Info:
+			l.log.Infow(msg)
+		case logging.Warn:
+			l.log.Warnw(msg)
+		case logging.Error:
+			l.log.Errorw(msg)
+		case logging.Debug:
+			l.log.Debugw(msg)
+		}
 	}
 }

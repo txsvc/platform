@@ -10,7 +10,7 @@ import (
 
 type (
 	ErrorReporter struct {
-		errorClient *errorreporting.Client
+		client *errorreporting.Client
 	}
 )
 
@@ -30,10 +30,10 @@ func NewErrorReporter(ID string) interface{} {
 	}
 
 	return &ErrorReporter{
-		errorClient: ec,
+		client: ec,
 	}
 }
 
 func (er *ErrorReporter) ReportError(e error) {
-	er.errorClient.Report(errorreporting.Entry{Error: e})
+	er.client.Report(errorreporting.Entry{Error: e})
 }

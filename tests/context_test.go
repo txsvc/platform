@@ -13,5 +13,4 @@ func TestDefaultContext(t *testing.T) {
 
 	ctx := platform.NewHttpContext(nil)
 	assert.NotNil(t, ctx)
-
 }

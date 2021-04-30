@@ -12,7 +12,7 @@ type (
 
 	// LoggingProvider defines a generic logging provider
 	LoggingProvider interface {
-		Log(string, ...interface{})
-		LogWithLevel(Severity, string, ...interface{})
+		Log(string, ...string)
+		LogWithLevel(Severity, string, ...string)
 	}
 )

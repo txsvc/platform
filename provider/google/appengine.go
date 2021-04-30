@@ -8,14 +8,14 @@ import (
 )
 
 type (
-	GAE struct {
+	GoogleAppEngine struct {
 	}
 )
 
 func NewAppEngineContextProvider(ID string) interface{} {
-	return &GAE{}
+	return &GoogleAppEngine{}
 }
 
-func (c *GAE) NewHttpContext(req *http.Request) context.Context {
+func (c *GoogleAppEngine) NewHttpContext(req *http.Request) context.Context {
 	return appengine.NewContext(req)
 }

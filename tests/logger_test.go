@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,11 +47,11 @@ func TestDefaultLoggerWithLevel(t *testing.T) {
 	logger.LogWithLevel(logging.Debug, "something happened with level DEBUG")
 }
 
-func TestEntryWithParams(t *testing.T) {
+func TestLoggingWithParams(t *testing.T) {
 	platform.InitDefaultProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
-	logger.LogWithLevel(logging.Info, "something with parameters happened", "foo", "bar", "question", 42, "orphan", true)
+	logger.LogWithLevel(logging.Info, "something with parameters happened", "foo", "bar", "question", fmt.Sprintf("%d", 42), "orphan", fmt.Sprintf("%v", true))
 }
