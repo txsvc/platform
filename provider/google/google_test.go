@@ -16,8 +16,7 @@ func TestGoogleErrorReporting(t *testing.T) {
 	require.True(t, env.Assert("PROJECT_ID"))
 	require.True(t, env.Assert("GOOGLE_APPLICATION_CREDENTIALS"))
 
-	er := platform.PlatformOpts{ID: "platform.google.errorreporting", Type: platform.ProviderTypeErrorReporter, Impl: NewErrorReporter}
-	p, err := platform.InitPlatform(context.TODO(), er)
+	p, err := platform.InitPlatform(context.TODO(), GoogleErrorReportingConfig)
 
 	if assert.NoError(t, err) {
 		assert.NotNil(t, p)

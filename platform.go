@@ -9,6 +9,8 @@ import (
 )
 
 type (
+	ProviderType int
+
 	LoggingProvider interface {
 		Log(string, ...interface{})
 	}
@@ -21,7 +23,6 @@ type (
 		NewHttpContext(*http.Request) context.Context
 	}
 
-	ProviderType         int
 	InstanceProviderFunc func(string) interface{}
 
 	PlatformOpts struct {
@@ -46,15 +47,17 @@ const (
 )
 
 var (
+	DefaultLoggerConfig         PlatformOpts = PlatformOpts{ID: "platform.default.logger", Type: ProviderTypeLogger, Impl: local.NewDefaultLogger}
+	DefaultErrorReportingConfig PlatformOpts = PlatformOpts{ID: "platform.default.errorreporting", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReporter}
+	DefaultContextConfig        PlatformOpts = PlatformOpts{ID: "platform.default.context", Type: ProviderTypeHttpContext, Impl: local.NewDefaultContextProvider}
+
+	// internal
 	platform *Platform
 )
 
 func init() {
-	dl := PlatformOpts{ID: "platform.logger.default", Type: ProviderTypeLogger, Impl: local.NewDefaultLogger}
-	er := PlatformOpts{ID: "platform.errorreporting.default", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReporter}
-	cx := PlatformOpts{ID: "platform.context.default", Type: ProviderTypeHttpContext, Impl: local.NewDefaultContextProvider}
 
-	p, err := InitPlatform(context.TODO(), dl, er, cx)
+	p, err := InitPlatform(context.TODO(), DefaultLoggerConfig, DefaultErrorReportingConfig, DefaultContextConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
