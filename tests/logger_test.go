@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/txsvc/platform"
+	"github.com/txsvc/platform/pkg/logging"
 	"github.com/txsvc/platform/provider/local"
 )
 
@@ -31,9 +32,19 @@ func TestDefaultLogger(t *testing.T) {
 	logger.Log("something happened")
 }
 
+func TestDefaultLoggerWithLevel(t *testing.T) {
+	logger := platform.Logger("platform-test-logs")
+	assert.NotNil(t, logger)
+
+	logger.LogWithLevel(logging.Info, "something happened with level INFO")
+	logger.LogWithLevel(logging.Warn, "something happened with level WARN")
+	logger.LogWithLevel(logging.Error, "something happened with level ERROR")
+	logger.LogWithLevel(logging.Debug, "something happened with level DEBUG")
+}
+
 func TestEntryWithParams(t *testing.T) {
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
-	logger.Log("something with parameters happened", "foo", "bar", "question", 42, "orphan", true)
+	logger.LogWithLevel(logging.Info, "something with parameters happened", "foo", "bar", "question", 42, "orphan", true)
 }

@@ -12,7 +12,7 @@ type (
 	}
 )
 
-var errorReporter *ErrorReporter
+var errorReporting *ErrorReporter
 
 func init() {
 	callerSkipConf := zap.AddCallerSkip(2)
@@ -25,11 +25,11 @@ func init() {
 		log: l.Sugar(),
 	}
 
-	errorReporter = &er
+	errorReporting = &er
 }
 
 func NewDefaultErrorReporter(ID string) interface{} {
-	return errorReporter
+	return errorReporting
 }
 
 func (er *ErrorReporter) ReportError(e error) {

@@ -5,6 +5,12 @@
 *.so
 *.dylib
 
+# Local development specific 
+stuff.md
+**/hack/**
+coverage.txt
+.DS_Store
+
 # Test binary, built with `go test -c`
 *.test
 

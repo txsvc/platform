@@ -1,21 +1,13 @@
 package local
 
 import (
+	"github.com/txsvc/platform/pkg/logging"
 	"go.uber.org/zap"
 )
 
-const (
-	Info Severity = iota
-	Warn
-	Error
-	Debug
-)
-
 type (
-	Severity int
-
 	Logger struct {
-		Lvl Severity
+		lvl logging.Severity
 		log *zap.SugaredLogger
 	}
 )
@@ -31,7 +23,7 @@ func NewDefaultLogger(ID string) interface{} {
 	}
 
 	logger := Logger{
-		Lvl: Info,
+		lvl: logging.Info,
 		log: l.Sugar(),
 	}
 
@@ -39,14 +31,18 @@ func NewDefaultLogger(ID string) interface{} {
 }
 
 func (l *Logger) Log(msg string, keyValuePairs ...interface{}) {
-	switch l.Lvl {
-	case Info:
+	l.LogWithLevel(l.lvl, msg, keyValuePairs...)
+}
+
+func (l *Logger) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...interface{}) {
+	switch lvl {
+	case logging.Info:
 		l.log.Infow(msg, keyValuePairs...)
-	case Warn:
+	case logging.Warn:
 		l.log.Warnw(msg, keyValuePairs...)
-	case Error:
+	case logging.Error:
 		l.log.Errorw(msg, keyValuePairs...)
-	case Debug:
+	case logging.Debug:
 		l.log.Debugw(msg, keyValuePairs...)
 	}
 }

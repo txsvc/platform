@@ -5,23 +5,27 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/txsvc/platform/pkg/errorreporting"
+	"github.com/txsvc/platform/pkg/logging"
 	"github.com/txsvc/platform/provider/local"
+)
+
+const (
+	ProviderTypeLogger ProviderType = iota
+	ProviderTypeErrorReporter
+	ProviderTypeHttpContext
 )
 
 type (
 	ProviderType int
 
-	LoggingProvider interface {
-		Log(string, ...interface{})
-	}
-
-	ErrorReportingProvider interface {
-		ReportError(error)
-	}
-
 	HttpRequestContextProvider interface {
 		NewHttpContext(*http.Request) context.Context
 	}
+
+	/*
+		func CreateHttpTask(ctx context.Context, method taskspb.HttpMethod, handler, token string, payload interface{}) (*taskspb.Task, error)
+	*/
 
 	InstanceProviderFunc func(string) interface{}
 
@@ -32,18 +36,12 @@ type (
 	}
 
 	Platform struct {
-		logger        map[string]LoggingProvider
-		errorReporter ErrorReportingProvider
-		httpContext   HttpRequestContextProvider
+		logger         map[string]logging.LoggingProvider
+		errorReporting errorreporting.ErrorReportingProvider
+		httpContext    HttpRequestContextProvider
 
 		providers map[ProviderType]PlatformOpts
 	}
-)
-
-const (
-	ProviderTypeLogger ProviderType = iota
-	ProviderTypeErrorReporter
-	ProviderTypeHttpContext
 )
 
 var (
@@ -80,7 +78,7 @@ func (l ProviderType) String() string {
 
 func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) {
 	p := Platform{
-		logger:    make(map[string]LoggingProvider),
+		logger:    make(map[string]logging.LoggingProvider),
 		providers: make(map[ProviderType]PlatformOpts),
 	}
 
@@ -92,7 +90,7 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 
 		switch opt.Type {
 		case ProviderTypeErrorReporter:
-			p.errorReporter = opt.Impl(opt.ID).(ErrorReportingProvider)
+			p.errorReporting = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
 		case ProviderTypeHttpContext:
 			p.httpContext = opt.Impl(opt.ID).(HttpRequestContextProvider)
 		}
@@ -109,21 +107,21 @@ func RegisterPlatform(p *Platform) *Platform {
 	return old
 }
 
-func Logger(logID string) LoggingProvider {
+func Logger(logID string) logging.LoggingProvider {
 	l, ok := platform.logger[logID]
 	if !ok {
 		opt, ok := platform.providers[ProviderTypeLogger]
 		if !ok {
 			return nil
 		}
-		l = opt.Impl(logID).(LoggingProvider)
+		l = opt.Impl(logID).(logging.LoggingProvider)
 		platform.logger[logID] = l
 	}
 	return l
 }
 
 func ReportError(e error) {
-	platform.errorReporter.ReportError(e)
+	platform.errorReporting.ReportError(e)
 }
 
 func NewHttpContext(req *http.Request) context.Context {
