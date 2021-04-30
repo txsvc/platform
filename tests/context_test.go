@@ -9,6 +9,8 @@ import (
 )
 
 func TestDefaultContext(t *testing.T) {
+	platform.InitDefaultProviders()
+
 	ctx := platform.NewHttpContext(nil)
 	assert.NotNil(t, ctx)
 

@@ -12,8 +12,8 @@ import (
 )
 
 func TestRegisterPlatform(t *testing.T) {
-	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: local.NewDefaultLogger}
-	p, err := platform.InitPlatform(context.TODO(), dl)
+	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: local.NewDefaultLoggingProvider}
+	p, err := platform.InitPlatform(context.Background(), dl)
 
 	if assert.NoError(t, err) {
 		assert.NotNil(t, p)
@@ -26,6 +26,8 @@ func TestRegisterPlatform(t *testing.T) {
 }
 
 func TestDefaultLogger(t *testing.T) {
+	platform.InitDefaultProviders()
+
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
@@ -33,6 +35,8 @@ func TestDefaultLogger(t *testing.T) {
 }
 
 func TestDefaultLoggerWithLevel(t *testing.T) {
+	platform.InitDefaultProviders()
+
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
@@ -43,6 +47,8 @@ func TestDefaultLoggerWithLevel(t *testing.T) {
 }
 
 func TestEntryWithParams(t *testing.T) {
+	platform.InitDefaultProviders()
+
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 

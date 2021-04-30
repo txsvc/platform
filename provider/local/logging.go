@@ -14,7 +14,7 @@ type (
 
 // the default logger implementation
 
-func NewDefaultLogger(ID string) interface{} {
+func NewDefaultLoggingProvider(ID string) interface{} {
 	callerSkipConf := zap.AddCallerSkip(1)
 
 	l, err := zap.NewProduction(callerSkipConf)

@@ -28,7 +28,7 @@ func init() {
 	errorReporting = &er
 }
 
-func NewDefaultErrorReporter(ID string) interface{} {
+func NewDefaultErrorReportingProvider(ID string) interface{} {
 	return errorReporting
 }
 

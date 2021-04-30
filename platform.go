@@ -3,10 +3,12 @@ package platform
 import (
 	"context"
 	"log"
-	"net/http"
+	h "net/http"
 
 	"github.com/txsvc/platform/pkg/errorreporting"
+	"github.com/txsvc/platform/pkg/http"
 	"github.com/txsvc/platform/pkg/logging"
+	"github.com/txsvc/platform/pkg/tasks"
 	"github.com/txsvc/platform/provider/local"
 )
 
@@ -14,18 +16,11 @@ const (
 	ProviderTypeLogger ProviderType = iota
 	ProviderTypeErrorReporter
 	ProviderTypeHttpContext
+	ProviderTypeTask
 )
 
 type (
 	ProviderType int
-
-	HttpRequestContextProvider interface {
-		NewHttpContext(*http.Request) context.Context
-	}
-
-	/*
-		func CreateHttpTask(ctx context.Context, method taskspb.HttpMethod, handler, token string, payload interface{}) (*taskspb.Task, error)
-	*/
 
 	InstanceProviderFunc func(string) interface{}
 
@@ -36,30 +31,35 @@ type (
 	}
 
 	Platform struct {
-		logger         map[string]logging.LoggingProvider
-		errorReporting errorreporting.ErrorReportingProvider
-		httpContext    HttpRequestContextProvider
+		logger          map[string]logging.LoggingProvider
+		errorReporting  errorreporting.ErrorReportingProvider
+		httpContext     http.HttpRequestContextProvider
+		backgroundTasks tasks.HttpTaskProvider
 
 		providers map[ProviderType]PlatformOpts
 	}
 )
 
 var (
-	DefaultLoggerConfig         PlatformOpts = PlatformOpts{ID: "platform.default.logger", Type: ProviderTypeLogger, Impl: local.NewDefaultLogger}
-	DefaultErrorReportingConfig PlatformOpts = PlatformOpts{ID: "platform.default.errorreporting", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReporter}
+	DefaultLoggingConfig        PlatformOpts = PlatformOpts{ID: "platform.default.logger", Type: ProviderTypeLogger, Impl: local.NewDefaultLoggingProvider}
+	DefaultErrorReportingConfig PlatformOpts = PlatformOpts{ID: "platform.default.errorreporting", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReportingProvider}
 	DefaultContextConfig        PlatformOpts = PlatformOpts{ID: "platform.default.context", Type: ProviderTypeHttpContext, Impl: local.NewDefaultContextProvider}
+	DefaultTaskConfig           PlatformOpts = PlatformOpts{ID: "platform.default.task", Type: ProviderTypeTask, Impl: local.NewDefaultTaskProvider}
 
 	// internal
 	platform *Platform
 )
 
 func init() {
+	InitDefaultProviders()
+}
 
-	p, err := InitPlatform(context.TODO(), DefaultLoggerConfig, DefaultErrorReportingConfig, DefaultContextConfig)
+func InitDefaultProviders() {
+	p, err := InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultTaskConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	platform = p
+	RegisterPlatform(p)
 }
 
 // Returns the name of a provider type
@@ -71,11 +71,14 @@ func (l ProviderType) String() string {
 		return "ERROR_REPORTER"
 	case ProviderTypeHttpContext:
 		return "HTTP_CONTEXT"
+	case ProviderTypeTask:
+		return "TASK"
 	default:
 		panic("unsupported")
 	}
 }
 
+// InitPlatform creates a new platform instance and configures it with providers
 func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) {
 	p := Platform{
 		logger:    make(map[string]logging.LoggingProvider),
@@ -92,12 +95,15 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 		case ProviderTypeErrorReporter:
 			p.errorReporting = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
 		case ProviderTypeHttpContext:
-			p.httpContext = opt.Impl(opt.ID).(HttpRequestContextProvider)
+			p.httpContext = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
+		case ProviderTypeTask:
+			p.backgroundTasks = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
 		}
 	}
 	return &p, nil
 }
 
+// RegisterPlatform makes p the new default platform provider
 func RegisterPlatform(p *Platform) *Platform {
 	if p == nil {
 		return nil
@@ -107,6 +113,12 @@ func RegisterPlatform(p *Platform) *Platform {
 	return old
 }
 
+// DefaultPlatform returns the current default platform provider
+func DefaultPlatform() *Platform {
+	return platform
+}
+
+// Logger returns a logger instance identified by ID
 func Logger(logID string) logging.LoggingProvider {
 	l, ok := platform.logger[logID]
 	if !ok {
@@ -120,10 +132,16 @@ func Logger(logID string) logging.LoggingProvider {
 	return l
 }
 
+// ReportError reports error e using the current platform's error reporting provider
 func ReportError(e error) {
 	platform.errorReporting.ReportError(e)
 }
 
-func NewHttpContext(req *http.Request) context.Context {
+// NewHttpContext creates a new Http context for request req
+func NewHttpContext(req *h.Request) context.Context {
 	return platform.httpContext.NewHttpContext(req)
+}
+
+func NewTask(task tasks.HttpTask) error {
+	return platform.backgroundTasks.CreateHttpTask(context.Background(), task)
 }

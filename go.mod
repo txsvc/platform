@@ -9,4 +9,5 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
 	google.golang.org/appengine v1.6.7
+	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1
 )

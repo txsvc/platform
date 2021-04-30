@@ -8,6 +8,8 @@ import (
 )
 
 func TestErrorReporter(t *testing.T) {
+	platform.InitDefaultProviders()
+
 	err := fmt.Errorf("something went wrong")
 
 	platform.ReportError(err)
