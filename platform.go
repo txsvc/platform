@@ -8,6 +8,7 @@ import (
 	"github.com/txsvc/platform/pkg/errorreporting"
 	"github.com/txsvc/platform/pkg/http"
 	"github.com/txsvc/platform/pkg/logging"
+	"github.com/txsvc/platform/pkg/metrics"
 	"github.com/txsvc/platform/pkg/tasks"
 	"github.com/txsvc/platform/provider/local"
 )
@@ -17,6 +18,7 @@ const (
 	ProviderTypeErrorReporter
 	ProviderTypeHttpContext
 	ProviderTypeTask
+	ProviderTypeMetrics
 )
 
 type (
@@ -31,11 +33,12 @@ type (
 	}
 
 	Platform struct {
-		logger          map[string]logging.LoggingProvider
-		errorReporting  errorreporting.ErrorReportingProvider
-		httpContext     http.HttpRequestContextProvider
-		backgroundTasks tasks.HttpTaskProvider
+		errorReportingProvider errorreporting.ErrorReportingProvider
+		httpContextProvider    http.HttpRequestContextProvider
+		backgroundTaskProvider tasks.HttpTaskProvider
+		metricsProvdider       metrics.MetricsProvider
 
+		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
 	}
 )
@@ -45,6 +48,7 @@ var (
 	DefaultErrorReportingConfig PlatformOpts = PlatformOpts{ID: "platform.default.errorreporting", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReportingProvider}
 	DefaultContextConfig        PlatformOpts = PlatformOpts{ID: "platform.default.context", Type: ProviderTypeHttpContext, Impl: local.NewDefaultContextProvider}
 	DefaultTaskConfig           PlatformOpts = PlatformOpts{ID: "platform.default.task", Type: ProviderTypeTask, Impl: local.NewDefaultTaskProvider}
+	DefaultMetricsConfig        PlatformOpts = PlatformOpts{ID: "platform.default.metrics", Type: ProviderTypeMetrics, Impl: local.NewDefaultMetricsProvider}
 
 	// internal
 	platform *Platform
@@ -55,7 +59,7 @@ func init() {
 }
 
 func InitDefaultProviders() {
-	p, err := InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultTaskConfig)
+	p, err := InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultTaskConfig, DefaultMetricsConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,6 +77,8 @@ func (l ProviderType) String() string {
 		return "HTTP_CONTEXT"
 	case ProviderTypeTask:
 		return "TASK"
+	case ProviderTypeMetrics:
+		return "METRICS"
 	default:
 		panic("unsupported")
 	}
@@ -93,11 +99,13 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 
 		switch opt.Type {
 		case ProviderTypeErrorReporter:
-			p.errorReporting = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
+			p.errorReportingProvider = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
 		case ProviderTypeHttpContext:
-			p.httpContext = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
+			p.httpContextProvider = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
 		case ProviderTypeTask:
-			p.backgroundTasks = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
+			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
+		case ProviderTypeMetrics:
+			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
 		}
 	}
 	return &p, nil
@@ -132,16 +140,21 @@ func Logger(logID string) logging.LoggingProvider {
 	return l
 }
 
+// Meter reports args
+func Meter(ctx context.Context, metric string, args ...string) {
+	platform.metricsProvdider.Meter(ctx, metric, args...)
+}
+
 // ReportError reports error e using the current platform's error reporting provider
 func ReportError(e error) {
-	platform.errorReporting.ReportError(e)
+	platform.errorReportingProvider.ReportError(e)
 }
 
 // NewHttpContext creates a new Http context for request req
 func NewHttpContext(req *h.Request) context.Context {
-	return platform.httpContext.NewHttpContext(req)
+	return platform.httpContextProvider.NewHttpContext(req)
 }
 
 func NewTask(task tasks.HttpTask) error {
-	return platform.backgroundTasks.CreateHttpTask(context.Background(), task)
+	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
 }

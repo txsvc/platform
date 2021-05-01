@@ -73,3 +73,17 @@ func TestCloudLogging(t *testing.T) {
 		log.Log("something with odd PARAMS", "foo", "bar", "baz")
 	}
 }
+
+func TestCloudMetrics(t *testing.T) {
+	require.True(t, env.Assert("PROJECT_ID"))
+	require.True(t, env.Assert("GOOGLE_APPLICATION_CREDENTIALS"))
+
+	p, err := platform.InitPlatform(context.TODO(), GoogleCloudLoggingConfig, GoogleCloudMetricsConfig)
+
+	if assert.NoError(t, err) {
+		assert.NotNil(t, p)
+
+		platform.RegisterPlatform(p)
+		platform.Meter(context.Background(), "some.thing", "foo", "bar", "a", "B")
+	}
+}
