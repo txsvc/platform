@@ -91,23 +91,10 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 		providers: make(map[ProviderType]PlatformOpts),
 	}
 
-	for _, opt := range opts {
-		if _, ok := p.providers[opt.Type]; ok {
-			return nil, fmt.Errorf("provider of type '%s' already registered", opt.Type.String())
-		}
-		p.providers[opt.Type] = opt
-
-		switch opt.Type {
-		case ProviderTypeErrorReporter:
-			p.errorReportingProvider = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
-		case ProviderTypeHttpContext:
-			p.httpContextProvider = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
-		case ProviderTypeTask:
-			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
-		case ProviderTypeMetrics:
-			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
-		}
+	if err := p.RegisterProviders(false, opts...); err != nil {
+		return nil, err
 	}
+
 	return &p, nil
 }
 
@@ -121,25 +108,28 @@ func RegisterPlatform(p *Platform) *Platform {
 	return old
 }
 
-// RegisterProvider registers a provider. An existing provider will be overwritten if ignoreExists is true,
-// otherwise the function returns an error
-func (p *Platform) RegisterProvider(opt PlatformOpts, ignoreExists bool) error {
-	if _, ok := p.providers[opt.Type]; ok {
-		if !ignoreExists {
-			return fmt.Errorf("provider of type '%s' already registered", opt.Type.String())
-		}
-	}
-	p.providers[opt.Type] = opt
+// RegisterProviders registers one or more  providers.
+// An existing provider will be overwritten if ignoreExists is true, otherwise the function returns an error.
+func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) error {
+	for _, opt := range opts {
 
-	switch opt.Type {
-	case ProviderTypeErrorReporter:
-		p.errorReportingProvider = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
-	case ProviderTypeHttpContext:
-		p.httpContextProvider = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
-	case ProviderTypeTask:
-		p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
-	case ProviderTypeMetrics:
-		p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
+		if _, ok := p.providers[opt.Type]; ok {
+			if !ignoreExists {
+				return fmt.Errorf("provider of type '%s' already registered", opt.Type.String())
+			}
+		}
+		p.providers[opt.Type] = opt
+
+		switch opt.Type {
+		case ProviderTypeErrorReporter:
+			p.errorReportingProvider = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
+		case ProviderTypeHttpContext:
+			p.httpContextProvider = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
+		case ProviderTypeTask:
+			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
+		case ProviderTypeMetrics:
+			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
+		}
 	}
 	return nil
 }

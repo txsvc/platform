@@ -116,10 +116,10 @@ func TestRegisterProvider(t *testing.T) {
 	p := DefaultPlatform()
 	assert.NotNil(t, p)
 
-	err := p.RegisterProvider(opt, false)
+	err := p.RegisterProviders(false, opt)
 	assert.Error(t, err)
 
-	err = p.RegisterProvider(opt, true)
+	err = p.RegisterProviders(true, opt)
 	assert.NoError(t, err)
 
 }

@@ -18,7 +18,7 @@ var (
 )
 
 func InitDefaultGoogleProviders() {
-	p, err := platform.InitPlatform(context.Background(), GoogleErrorReportingConfig, GoogleCloudTaskConfig, GoogleCloudLoggingConfig, GoogleCloudMetricsConfig)
+	p, err := platform.InitPlatform(context.Background(), GoogleErrorReportingConfig, GoogleCloudTaskConfig, GoogleCloudLoggingConfig, GoogleCloudMetricsConfig, AppEngineContextConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
