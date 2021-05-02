@@ -13,9 +13,17 @@ type (
 	GoogleCloudLogger struct {
 		logger *logging.Logger
 	}
+
+	logEvent struct {
+		logger *logging.Logger
+		evt    *logging.Entry
+	}
 )
 
-var client *logging.Client
+var (
+	client    *logging.Client
+	logEvents chan (*logEvent)
+)
 
 func init() {
 	projectID := env.GetString("PROJECT_ID", "")
@@ -26,6 +34,17 @@ func init() {
 		log.Fatal(err)
 	}
 	client = lc
+
+	// initialize the logger queue
+	logEvents = make(chan *logEvent, 20) // with a backlog
+	go uploader()
+}
+
+func uploader() {
+	for {
+		e := <-logEvents
+		e.logger.Log(*e.evt)
+	}
 }
 
 func NewGoogleCloudLoggingProvider(ID string) interface{} {
@@ -61,7 +80,13 @@ func (l *GoogleCloudLogger) LogWithLevel(lvl lp.Severity, msg string, keyValuePa
 		}
 		e.Labels = labels
 	}
-	l.logger.Log(e)
+
+	evt := &logEvent{
+		logger: l.logger,
+		evt:    &e,
+	}
+	logEvents <- evt
+
 }
 
 func toSeverity(severity lp.Severity) logging.Severity {

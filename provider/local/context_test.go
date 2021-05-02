@@ -1,4 +1,4 @@
-package tests
+package local
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestDefaultContext(t *testing.T) {
-	platform.InitDefaultProviders()
+	InitDefaultProviders()
 
 	ctx := platform.NewHttpContext(nil)
 	assert.NotNil(t, ctx)

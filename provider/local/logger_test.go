@@ -1,4 +1,4 @@
-package tests
+package local
 
 import (
 	"context"
@@ -9,11 +9,10 @@ import (
 
 	"github.com/txsvc/platform"
 	"github.com/txsvc/platform/pkg/logging"
-	"github.com/txsvc/platform/provider/local"
 )
 
 func TestRegisterPlatform(t *testing.T) {
-	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: local.NewDefaultLoggingProvider}
+	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: NewDefaultLoggingProvider}
 	p, err := platform.InitPlatform(context.Background(), dl)
 
 	if assert.NoError(t, err) {
@@ -27,7 +26,7 @@ func TestRegisterPlatform(t *testing.T) {
 }
 
 func TestDefaultLogger(t *testing.T) {
-	platform.InitDefaultProviders()
+	InitDefaultProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
@@ -36,7 +35,7 @@ func TestDefaultLogger(t *testing.T) {
 }
 
 func TestDefaultLoggerWithLevel(t *testing.T) {
-	platform.InitDefaultProviders()
+	InitDefaultProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
@@ -48,7 +47,7 @@ func TestDefaultLoggerWithLevel(t *testing.T) {
 }
 
 func TestLoggingWithParams(t *testing.T) {
-	platform.InitDefaultProviders()
+	InitDefaultProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)

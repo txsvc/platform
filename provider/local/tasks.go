@@ -16,6 +16,5 @@ func NewDefaultTaskProvider(ID string) interface{} {
 }
 
 func (t *Tasks) CreateHttpTask(ctx context.Context, task tasks.HttpTask) error {
-	fmt.Println(task)
-	return nil
+	return fmt.Errorf("not implemented")
 }

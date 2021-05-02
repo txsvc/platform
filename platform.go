@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"fmt"
 	"log"
 	h "net/http"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/txsvc/platform/pkg/logging"
 	"github.com/txsvc/platform/pkg/metrics"
 	"github.com/txsvc/platform/pkg/tasks"
-	"github.com/txsvc/platform/provider/local"
 )
 
 const (
@@ -41,25 +41,25 @@ type (
 		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
 	}
+
+	nullProviderImpl struct {
+	}
 )
 
 var (
-	DefaultLoggingConfig        PlatformOpts = PlatformOpts{ID: "platform.default.logger", Type: ProviderTypeLogger, Impl: local.NewDefaultLoggingProvider}
-	DefaultErrorReportingConfig PlatformOpts = PlatformOpts{ID: "platform.default.errorreporting", Type: ProviderTypeErrorReporter, Impl: local.NewDefaultErrorReportingProvider}
-	DefaultContextConfig        PlatformOpts = PlatformOpts{ID: "platform.default.context", Type: ProviderTypeHttpContext, Impl: local.NewDefaultContextProvider}
-	DefaultTaskConfig           PlatformOpts = PlatformOpts{ID: "platform.default.task", Type: ProviderTypeTask, Impl: local.NewDefaultTaskProvider}
-	DefaultMetricsConfig        PlatformOpts = PlatformOpts{ID: "platform.default.metrics", Type: ProviderTypeMetrics, Impl: local.NewDefaultMetricsProvider}
-
 	// internal
 	platform *Platform
 )
 
 func init() {
-	InitDefaultProviders()
-}
+	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
+	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newNullProvider)
+	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newNullProvider)
+	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newNullProvider)
+	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newNullProvider)
+	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newNullProvider)
 
-func InitDefaultProviders() {
-	p, err := InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultTaskConfig, DefaultMetricsConfig)
+	p, err := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) 
 
 	for _, opt := range opts {
 		if _, ok := p.providers[opt.Type]; ok {
-			log.Fatalf("provider of type '%s' already registered", opt.Type.String())
+			return nil, fmt.Errorf("provider of type '%s' already registered", opt.Type.String())
 		}
 		p.providers[opt.Type] = opt
 
@@ -121,9 +121,41 @@ func RegisterPlatform(p *Platform) *Platform {
 	return old
 }
 
-// DefaultPlatform returns the current default platform provider
+// RegisterProvider registers a provider. An existing provider will be overwritten if ignoreExists is true,
+// otherwise the function returns an error
+func (p *Platform) RegisterProvider(opt PlatformOpts, ignoreExists bool) error {
+	if _, ok := p.providers[opt.Type]; ok {
+		if !ignoreExists {
+			return fmt.Errorf("provider of type '%s' already registered", opt.Type.String())
+		}
+	}
+	p.providers[opt.Type] = opt
+
+	switch opt.Type {
+	case ProviderTypeErrorReporter:
+		p.errorReportingProvider = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
+	case ProviderTypeHttpContext:
+		p.httpContextProvider = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
+	case ProviderTypeTask:
+		p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
+	case ProviderTypeMetrics:
+		p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
+	}
+	return nil
+}
+
+// DefaultPlatform returns the current default platform provider.
 func DefaultPlatform() *Platform {
 	return platform
+}
+
+// WithProvider returns a populated PlatformOption struct.
+func WithProvider(ID string, providerType ProviderType, impl InstanceProviderFunc) PlatformOpts {
+	return PlatformOpts{
+		ID:   ID,
+		Type: providerType,
+		Impl: impl,
+	}
 }
 
 // Logger returns a logger instance identified by ID
@@ -140,7 +172,7 @@ func Logger(logID string) logging.LoggingProvider {
 	return l
 }
 
-// Meter reports args
+// Meter logs args to a metrics log from where the values can be aggregated and analyzed.
 func Meter(ctx context.Context, metric string, args ...string) {
 	platform.metricsProvdider.Meter(ctx, metric, args...)
 }
@@ -155,6 +187,32 @@ func NewHttpContext(req *h.Request) context.Context {
 	return platform.httpContextProvider.NewHttpContext(req)
 }
 
+// NewTask schedules a new http background task
 func NewTask(task tasks.HttpTask) error {
 	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
+}
+
+// a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
+func newNullProvider(ID string) interface{} {
+	return &nullProviderImpl{}
+}
+
+func (np *nullProviderImpl) NewHttpContext(req *h.Request) context.Context {
+	return nil
+}
+
+func (np *nullProviderImpl) ReportError(e error) {
+}
+
+func (np *nullProviderImpl) Log(msg string, keyValuePairs ...string) {
+}
+
+func (np *nullProviderImpl) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...string) {
+}
+
+func (np *nullProviderImpl) Meter(ctx context.Context, metric string, args ...string) {
+}
+
+func (np *nullProviderImpl) CreateHttpTask(ctx context.Context, task tasks.HttpTask) error {
+	return fmt.Errorf("not implemented")
 }

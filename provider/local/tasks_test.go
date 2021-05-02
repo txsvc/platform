@@ -1,4 +1,4 @@
-package tests
+package local
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestDefaultTasks(t *testing.T) {
-	platform.InitDefaultProviders()
+	InitDefaultProviders()
 
 	task := tasks.HttpTask{
 		Method:  tasks.HttpMethodGet,
@@ -19,5 +19,5 @@ func TestDefaultTasks(t *testing.T) {
 		Payload: nil,
 	}
 	err := platform.NewTask(task)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 }

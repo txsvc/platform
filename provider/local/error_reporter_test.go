@@ -1,4 +1,4 @@
-package tests
+package local
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestErrorReporter(t *testing.T) {
-	platform.InitDefaultProviders()
+	InitDefaultProviders()
 
 	err := fmt.Errorf("something went wrong")
 
