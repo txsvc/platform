@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/txsvc/platform"
+	"github.com/txsvc/platform/v2"
 )
 
 func TestDefaultContext(t *testing.T) {

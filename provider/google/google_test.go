@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/txsvc/platform"
-	"github.com/txsvc/platform/pkg/env"
-	"github.com/txsvc/platform/pkg/logging"
-	"github.com/txsvc/platform/pkg/tasks"
+	"github.com/txsvc/platform/v2"
+	"github.com/txsvc/platform/v2/pkg/env"
+	"github.com/txsvc/platform/v2/pkg/logging"
+	"github.com/txsvc/platform/v2/pkg/tasks"
 )
 
 func TestGoogleErrorReporting(t *testing.T) {

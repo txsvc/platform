@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/txsvc/platform"
+	"github.com/txsvc/platform/v2"
 )
 
 func TestErrorReporter(t *testing.T) {

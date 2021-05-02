@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/txsvc/platform"
-	"github.com/txsvc/platform/pkg/tasks"
+	"github.com/txsvc/platform/v2"
+	"github.com/txsvc/platform/v2/pkg/tasks"
 )
 
 func TestDefaultTasks(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/txsvc/platform"
+	"github.com/txsvc/platform/v2"
 )
 
 var (

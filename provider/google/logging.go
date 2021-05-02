@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"cloud.google.com/go/logging"
-	"github.com/txsvc/platform/pkg/env"
-	lp "github.com/txsvc/platform/pkg/logging"
+	"github.com/txsvc/platform/v2/pkg/env"
+	lp "github.com/txsvc/platform/v2/pkg/logging"
 )
 
 type (

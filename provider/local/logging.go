@@ -1,7 +1,7 @@
 package local
 
 import (
-	"github.com/txsvc/platform/pkg/logging"
+	"github.com/txsvc/platform/v2/pkg/logging"
 	"go.uber.org/zap"
 )
 

@@ -1,4 +1,4 @@
-module github.com/txsvc/platform
+module github.com/txsvc/platform/v2
 
 go 1.15
 

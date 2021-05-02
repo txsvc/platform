@@ -8,7 +8,7 @@ import (
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/storage"
 
-	"github.com/txsvc/platform/pkg/env"
+	"github.com/txsvc/platform/v2/pkg/env"
 )
 
 type (

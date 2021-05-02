@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/txsvc/platform"
-	"github.com/txsvc/platform/pkg/logging"
+	"github.com/txsvc/platform/v2"
+	"github.com/txsvc/platform/v2/pkg/logging"
 )
 
 func TestRegisterPlatform(t *testing.T) {

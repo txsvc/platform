@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/txsvc/platform/pkg/tasks"
+	"github.com/txsvc/platform/v2/pkg/tasks"
 )
 
 type (

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/txsvc/platform/pkg/env"
-	"github.com/txsvc/platform/pkg/logging"
+	"github.com/txsvc/platform/v2/pkg/env"
+	"github.com/txsvc/platform/v2/pkg/logging"
 )
 
 // the metrics implementation is basically a logger.

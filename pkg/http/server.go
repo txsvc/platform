@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/txsvc/platform/pkg/env"
+	"github.com/txsvc/platform/v2/pkg/env"
 )
 
 const (

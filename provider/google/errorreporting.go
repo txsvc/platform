@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"cloud.google.com/go/errorreporting"
-	"github.com/txsvc/platform/pkg/env"
+	"github.com/txsvc/platform/v2/pkg/env"
 )
 
 type (

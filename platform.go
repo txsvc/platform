@@ -6,11 +6,11 @@ import (
 	"log"
 	h "net/http"
 
-	"github.com/txsvc/platform/pkg/errorreporting"
-	"github.com/txsvc/platform/pkg/http"
-	"github.com/txsvc/platform/pkg/logging"
-	"github.com/txsvc/platform/pkg/metrics"
-	"github.com/txsvc/platform/pkg/tasks"
+	"github.com/txsvc/platform/v2/pkg/errorreporting"
+	"github.com/txsvc/platform/v2/pkg/http"
+	"github.com/txsvc/platform/v2/pkg/logging"
+	"github.com/txsvc/platform/v2/pkg/metrics"
+	"github.com/txsvc/platform/v2/pkg/tasks"
 )
 
 const (
