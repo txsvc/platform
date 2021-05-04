@@ -9,6 +9,8 @@ import (
 
 // the metrics implementation is basically a logger.
 
+// see https://pkg.go.dev/go.opentelemetry.io/otel/metric for inspiration
+
 func NewGoogleCloudMetricsProvider(ID string) interface{} {
 	metrics := env.GetString("METRICS_LOG_NAME", "metrics")
 	return &GoogleCloudLogger{

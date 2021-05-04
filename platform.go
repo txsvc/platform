@@ -188,7 +188,7 @@ func newNullProvider(ID string) interface{} {
 }
 
 func (np *nullProviderImpl) NewHttpContext(req *h.Request) context.Context {
-	return nil
+	return context.TODO()
 }
 
 func (np *nullProviderImpl) ReportError(e error) {
