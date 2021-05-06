@@ -23,11 +23,11 @@ func (c *TestProviderImpl) NewHttpContext(req *http.Request) context.Context {
 
 func resetPlatform() {
 	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
-	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newNullProvider)
-	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newNullProvider)
-	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newNullProvider)
-	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newNullProvider)
-	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newNullProvider)
+	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
+	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
+	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
+	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newDefaultProvider)
+	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
 
 	p, _ := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig)
 	platform = p

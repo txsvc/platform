@@ -8,11 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/txsvc/platform/v2"
-	"github.com/txsvc/platform/v2/pkg/logging"
+	"github.com/txsvc/platform/v2/logging"
+	"github.com/txsvc/platform/v2/tasks"
 )
 
 func TestRegisterPlatform(t *testing.T) {
-	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: NewDefaultLoggingProvider}
+	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: NewLocalLoggingProvider}
 	p, err := platform.InitPlatform(context.Background(), dl)
 
 	if assert.NoError(t, err) {
@@ -25,8 +26,15 @@ func TestRegisterPlatform(t *testing.T) {
 	}
 }
 
+func TestDefaultContext(t *testing.T) {
+	InitLocalProviders()
+
+	ctx := platform.NewHttpContext(nil)
+	assert.NotNil(t, ctx)
+}
+
 func TestDefaultLogger(t *testing.T) {
-	InitDefaultProviders()
+	InitLocalProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
@@ -35,7 +43,7 @@ func TestDefaultLogger(t *testing.T) {
 }
 
 func TestDefaultLoggerWithLevel(t *testing.T) {
-	InitDefaultProviders()
+	InitLocalProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
@@ -47,10 +55,31 @@ func TestDefaultLoggerWithLevel(t *testing.T) {
 }
 
 func TestLoggingWithParams(t *testing.T) {
-	InitDefaultProviders()
+	InitLocalProviders()
 
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
 	logger.LogWithLevel(logging.Info, "something with parameters happened", "foo", "bar", "question", fmt.Sprintf("%d", 42), "orphan", fmt.Sprintf("%v", true))
+}
+
+func TestErrorReporter(t *testing.T) {
+	InitLocalProviders()
+
+	err := fmt.Errorf("something went wrong")
+
+	platform.ReportError(err)
+}
+
+func TestDefaultTasks(t *testing.T) {
+	InitLocalProviders()
+
+	task := tasks.HttpTask{
+		Method:  tasks.HttpMethodGet,
+		Request: "http://get.some.stuff",
+		Token:   "abc123",
+		Payload: nil,
+	}
+	err := platform.NewTask(task)
+	assert.Error(t, err)
 }

@@ -6,11 +6,11 @@ import (
 	"log"
 	h "net/http"
 
-	"github.com/txsvc/platform/v2/pkg/errorreporting"
-	"github.com/txsvc/platform/v2/pkg/http"
-	"github.com/txsvc/platform/v2/pkg/logging"
-	"github.com/txsvc/platform/v2/pkg/metrics"
-	"github.com/txsvc/platform/v2/pkg/tasks"
+	"github.com/txsvc/platform/v2/errorreporting"
+	"github.com/txsvc/platform/v2/http"
+	"github.com/txsvc/platform/v2/logging"
+	"github.com/txsvc/platform/v2/metrics"
+	"github.com/txsvc/platform/v2/tasks"
 )
 
 const (
@@ -26,6 +26,10 @@ type (
 
 	InstanceProviderFunc func(string) interface{}
 
+	GenericProvider interface {
+		Close() error
+	}
+
 	PlatformOpts struct {
 		ID   string
 		Type ProviderType
@@ -40,9 +44,7 @@ type (
 
 		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
-	}
-
-	nullProviderImpl struct {
+		instances map[ProviderType]GenericProvider
 	}
 )
 
@@ -53,11 +55,11 @@ var (
 
 func init() {
 	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
-	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newNullProvider)
-	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newNullProvider)
-	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newNullProvider)
-	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newNullProvider)
-	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newNullProvider)
+	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
+	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
+	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
+	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newDefaultProvider)
+	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
 
 	p, err := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig)
 	if err != nil {
@@ -134,9 +136,28 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 	return nil
 }
 
+// Close iterates over all registered providers and shuts them down.
+func (p *Platform) Close() error {
+	hasError := false
+	for _, provider := range p.instances {
+		if err := provider.Close(); err != nil {
+			hasError = true
+		}
+	}
+	if hasError {
+		return fmt.Errorf("error(s) closing all providers")
+	}
+	return nil
+}
+
 // DefaultPlatform returns the current default platform provider.
 func DefaultPlatform() *Platform {
 	return platform
+}
+
+// Close asks all registered providers of the current default platform instance to gracefully shutdown.
+func Close() error {
+	return platform.Close()
 }
 
 // WithProvider returns a populated PlatformOption struct.
@@ -180,29 +201,4 @@ func NewHttpContext(req *h.Request) context.Context {
 // NewTask schedules a new http background task
 func NewTask(task tasks.HttpTask) error {
 	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
-}
-
-// a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
-func newNullProvider(ID string) interface{} {
-	return &nullProviderImpl{}
-}
-
-func (np *nullProviderImpl) NewHttpContext(req *h.Request) context.Context {
-	return context.TODO()
-}
-
-func (np *nullProviderImpl) ReportError(e error) {
-}
-
-func (np *nullProviderImpl) Log(msg string, keyValuePairs ...string) {
-}
-
-func (np *nullProviderImpl) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...string) {
-}
-
-func (np *nullProviderImpl) Meter(ctx context.Context, metric string, args ...string) {
-}
-
-func (np *nullProviderImpl) CreateHttpTask(ctx context.Context, task tasks.HttpTask) error {
-	return fmt.Errorf("not implemented")
 }
