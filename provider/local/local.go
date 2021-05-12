@@ -9,10 +9,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/txsvc/platform/v2"
+	"github.com/txsvc/platform/v2/auth"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
 	"github.com/txsvc/platform/v2/metrics"
+	"github.com/txsvc/platform/v2/pkg/account"
+	"github.com/txsvc/platform/v2/pkg/timestamp"
 	"github.com/txsvc/platform/v2/tasks"
 )
 
@@ -36,6 +39,7 @@ var (
 	DefaultContextConfig        platform.PlatformOpts = platform.WithProvider("platform.default.context", platform.ProviderTypeHttpContext, NewLocalProvider)
 	DefaultTaskConfig           platform.PlatformOpts = platform.WithProvider("platform.default.task", platform.ProviderTypeTask, NewLocalProvider)
 	DefaultMetricsConfig        platform.PlatformOpts = platform.WithProvider("platform.default.metrics", platform.ProviderTypeMetrics, NewLocalProvider)
+	DefaultAuthConfig           platform.PlatformOpts = platform.WithProvider("platform.default.auth", platform.ProviderTypeAuth, auth.NewAuthorizationProvider)
 
 	errorReportingClient *LocalErrorReportingProviderImpl
 
@@ -44,6 +48,7 @@ var (
 	_ http.HttpRequestContextProvider = (*LocalProviderImpl)(nil)
 	_ metrics.MetricsProvider         = (*LocalProviderImpl)(nil)
 	_ tasks.HttpTaskProvider          = (*LocalProviderImpl)(nil)
+	_ auth.AuthorizationProvider      = (*LocalProviderImpl)(nil)
 
 	_ platform.GenericProvider              = (*LocalErrorReportingProviderImpl)(nil)
 	_ errorreporting.ErrorReportingProvider = (*LocalErrorReportingProviderImpl)(nil)
@@ -161,4 +166,56 @@ func (m *LocalProviderImpl) Meter(ctx context.Context, metric string, args ...st
 
 func (t *LocalProviderImpl) CreateHttpTask(ctx context.Context, task tasks.HttpTask) error {
 	return fmt.Errorf("not implemented")
+}
+
+func NewLocalAuthorizationProvider(ID string) interface{} {
+	return &LocalProviderImpl{}
+}
+
+// SendAccountChallenge sends a notification to the user promting to confirm the account
+func (a *LocalProviderImpl) SendAccountChallenge(ctx context.Context, account *account.Account) error {
+	return nil
+}
+
+// SendAuthToken sends a notification to the user with the current authentication token
+func (a *LocalProviderImpl) SendAuthToken(ctx context.Context, account *account.Account) error {
+	return nil
+}
+
+func (a *LocalProviderImpl) CreateAuthorization(account *account.Account, req *auth.AuthorizationRequest) *auth.Authorization {
+	now := timestamp.Now()
+	scope := auth.DefaultScope
+	if req.Scope != "" {
+		scope = req.Scope
+	}
+
+	aa := auth.Authorization{
+		ClientID:  account.ClientID,
+		Realm:     req.Realm,
+		Token:     auth.CreateSimpleToken(),
+		TokenType: auth.DefaultTokenType,
+		UserID:    req.UserID,
+		Scope:     scope,
+		Revoked:   false,
+		Expires:   now + (auth.DefaultAuthorizationExpiration * 86400),
+		Created:   now,
+		Updated:   now,
+	}
+	return &aa
+}
+
+func (a *LocalProviderImpl) Scope() string {
+	return auth.DefaultScope
+}
+
+func (a *LocalProviderImpl) Endpoint() string {
+	return auth.DefaultEndpoint
+}
+
+func (a *LocalProviderImpl) AuthenticationExpiration() int {
+	return auth.DefaultAuthenticationExpiration
+}
+
+func (a *LocalProviderImpl) AuthorizationExpiration() int {
+	return auth.DefaultAuthorizationExpiration
 }

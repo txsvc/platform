@@ -19,6 +19,7 @@ const (
 	ProviderTypeHttpContext
 	ProviderTypeTask
 	ProviderTypeMetrics
+	ProviderTypeAuth
 )
 
 type (
