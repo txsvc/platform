@@ -64,9 +64,9 @@ type (
 
 	AuthorizationProvider interface {
 		// Send an account challenge to confirm the account
-		SendAccountChallenge(context.Context, *account.Account) error
+		AccountChallengeNotification(context.Context, *account.Account) error
 		// Send the new token
-		SendAuthToken(context.Context, *account.Account) error
+		ProvideAuthorizationToken(context.Context, *account.Account) error
 		// Scope returns the default scope
 		Scope() string
 		// Endpoint returns the default endpoint url

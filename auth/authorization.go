@@ -198,6 +198,7 @@ func namedKey(part1, part2 string) string {
 }
 
 func hasScope(scopes, scope string) bool {
+	// FIXME this is a VERY simple implementation
 	if scopes == "" || scope == "" {
 		return false // empty inputs should never evalute to true
 	}

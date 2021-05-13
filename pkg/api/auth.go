@@ -47,7 +47,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the confirmation link
-		err = platform.AuthorizationProvider().SendAccountChallenge(ctx, acc)
+		err = platform.AuthorizationProvider().AccountChallengeNotification(ctx, acc)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -63,7 +63,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the account confirmation link
-		err = platform.AuthorizationProvider().SendAccountChallenge(ctx, acc)
+		err = platform.AuthorizationProvider().AccountChallengeNotification(ctx, acc)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -80,7 +80,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
-	err = platform.AuthorizationProvider().SendAuthToken(ctx, acc)
+	err = platform.AuthorizationProvider().ProvideAuthorizationToken(ctx, acc)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -151,7 +151,7 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	err = platform.AuthorizationProvider().SendAuthToken(ctx, acc)
+	err = platform.AuthorizationProvider().ProvideAuthorizationToken(ctx, acc)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}

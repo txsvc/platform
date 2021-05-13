@@ -62,13 +62,13 @@ func (np *defaultProviderImpl) CreateHttpTask(ctx context.Context, task tasks.Ht
 	return fmt.Errorf("not implemented")
 }
 
-// SendAccountChallenge sends a notification to the user promting to confirm the account
-func (np *defaultProviderImpl) SendAccountChallenge(ctx context.Context, account *account.Account) error {
+// AccountChallengeNotification sends a notification to the user promting to confirm the account
+func (np *defaultProviderImpl) AccountChallengeNotification(ctx context.Context, account *account.Account) error {
 	return nil
 }
 
-// SendAuthToken sends a notification to the user with the current authentication token
-func (np *defaultProviderImpl) SendAuthToken(ctx context.Context, account *account.Account) error {
+// ProvideAuthorizationToken sends a notification to the user with the current authentication token
+func (np *defaultProviderImpl) ProvideAuthorizationToken(ctx context.Context, account *account.Account) error {
 	return nil
 }
 
