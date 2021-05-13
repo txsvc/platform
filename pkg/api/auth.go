@@ -1,4 +1,4 @@
-package auth
+package api
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/txsvc/platform/v2"
 
+	"github.com/txsvc/platform/v2/auth"
 	"github.com/txsvc/platform/v2/pkg/account"
-	"github.com/txsvc/platform/v2/pkg/api"
 )
 
 // LoginRequestEndpoint initiates the login process.
@@ -23,33 +23,33 @@ import (
 // status 400: invalid request data
 // status 403: only logged-out and confirmed users can proceed
 func LoginRequestEndpoint(c echo.Context) error {
-	var req *AuthorizationRequest = new(AuthorizationRequest)
+	var req *auth.AuthorizationRequest = new(auth.AuthorizationRequest)
 	ctx := platform.NewHttpContext(c.Request())
 
 	err := c.Bind(req)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 	if req.Realm == "" || req.UserID == "" {
-		return api.ErrorResponse(c, http.StatusBadRequest, err)
+		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
 	acc, err := account.FindAccountByUserID(ctx, req.Realm, req.UserID)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	// new account
 	if acc == nil {
 		// #1: create a new account
-		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, authProvider.AuthenticationExpiration())
+		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, platform.AuthorizationProvider().AuthenticationExpiration())
 		if err != nil {
-			return api.ErrorResponse(c, http.StatusInternalServerError, err)
+			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the confirmation link
-		err = authProvider.SendAccountChallenge(ctx, acc)
+		err = platform.AuthorizationProvider().SendAccountChallenge(ctx, acc)
 		if err != nil {
-			return api.ErrorResponse(c, http.StatusInternalServerError, err)
+			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// status 201: new account
 		return c.NoContent(http.StatusCreated)
@@ -58,31 +58,31 @@ func LoginRequestEndpoint(c echo.Context) error {
 	// existing account but check some stuff first ...
 	if acc.Confirmed == 0 {
 		// #1: update the expiration timestamp
-		acc, err = account.ResetAccountChallenge(ctx, acc, authProvider.AuthenticationExpiration())
+		acc, err = account.ResetAccountChallenge(ctx, acc, platform.AuthorizationProvider().AuthenticationExpiration())
 		if err != nil {
-			return api.ErrorResponse(c, http.StatusInternalServerError, err)
+			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the account confirmation link
-		err = authProvider.SendAccountChallenge(ctx, acc)
+		err = platform.AuthorizationProvider().SendAccountChallenge(ctx, acc)
 		if err != nil {
-			return api.ErrorResponse(c, http.StatusInternalServerError, err)
+			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// status 201: new account
 		return c.NoContent(http.StatusCreated)
 	}
 	if acc.Status != 0 {
 		// status 403: only logged-out and confirmed users can proceed, do nothing otherwise
-		return api.ErrorResponse(c, http.StatusForbidden, err)
+		return ErrorResponse(c, http.StatusForbidden, err)
 	}
 
 	// create and send the auth token
-	acc, err = account.ResetTemporaryToken(ctx, acc, authProvider.AuthenticationExpiration())
+	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().AuthenticationExpiration())
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
-	err = authProvider.SendAuthToken(ctx, acc)
+	err = platform.AuthorizationProvider().SendAuthToken(ctx, acc)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	// status 204: existing account, email with token sent
@@ -94,33 +94,33 @@ func LoginRequestEndpoint(c echo.Context) error {
 // POST /logout
 
 func LogoutRequestEndpoint(c echo.Context) error {
-	var req *AuthorizationRequest = new(AuthorizationRequest)
+	var req *auth.AuthorizationRequest = new(auth.AuthorizationRequest)
 	ctx := platform.NewHttpContext(c.Request())
 
 	err := c.Bind(req)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 	if req.Realm == "" || req.UserID == "" {
-		return api.ErrorResponse(c, http.StatusBadRequest, err)
+		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	token, err := GetBearerToken(c.Request())
+	token, err := auth.GetBearerToken(c.Request())
 	if err != nil {
-		return ErrNoToken
+		return auth.ErrNoToken
 	}
-	auth, err := FindAuthorizationByToken(ctx, token)
+	ath, err := auth.FindAuthorizationByToken(ctx, token)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusBadRequest, err)
+		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
-	if auth.UserID != req.UserID || auth.Realm != req.Realm {
-		return api.ErrorResponse(c, http.StatusBadRequest, err)
+	if ath.UserID != req.UserID || ath.Realm != req.Realm {
+		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
 	// logout starts here
-	status, err := LogoutAccount(ctx, auth.Realm, auth.ClientID)
+	status, err := auth.LogoutAccount(ctx, ath.Realm, ath.ClientID)
 	if err != nil {
-		return api.ErrorResponse(c, status, err)
+		return ErrorResponse(c, status, err)
 	}
 	return c.NoContent(status)
 }
@@ -138,26 +138,26 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 
 	token := c.Param("token")
 	if token == "" {
-		return api.ErrorResponse(c, http.StatusBadRequest, ErrInvalidRoute)
+		return ErrorResponse(c, http.StatusBadRequest, auth.ErrInvalidRoute)
 	}
 
-	acc, status, err := ConfirmLoginChallenge(ctx, token)
+	acc, status, err := auth.ConfirmLoginChallenge(ctx, token)
 	if status != http.StatusNoContent {
-		return api.ErrorResponse(c, status, err)
+		return ErrorResponse(c, status, err)
 	}
 
-	acc, err = account.ResetTemporaryToken(ctx, acc, authProvider.AuthenticationExpiration())
+	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().AuthenticationExpiration())
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	err = authProvider.SendAuthToken(ctx, acc)
+	err = platform.AuthorizationProvider().SendAuthToken(ctx, acc)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	// status 307: account is confirmed, email with auth token sent, redirect now
-	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", authProvider.Endpoint()))
+	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", platform.AuthorizationProvider().Endpoint()))
 }
 
 // GetAuthorizationEndpoint exchanges a temporary confirmation token for a 'real' token.
@@ -167,25 +167,28 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 // status 401: token is expired or has already been used, token and user_id do not match
 // status 404: token was not found
 func GetAuthorizationEndpoint(c echo.Context) error {
-	var req *AuthorizationRequest = new(AuthorizationRequest)
+	var req *auth.AuthorizationRequest = new(auth.AuthorizationRequest)
 	ctx := platform.NewHttpContext(c.Request())
 
 	err := c.Bind(req)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	if req.Token == "" || req.Realm == "" || req.UserID == "" {
-		return api.ErrorResponse(c, http.StatusBadRequest, err)
+		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	auth, status, err := exchangeToken(ctx, req, c.Request().RemoteAddr)
+	// make sure we have a known default scope and no one sneaks something in
+	req.Scope = platform.AuthorizationProvider().Scope()
+
+	ath, status, err := auth.ExchangeToken(ctx, req, platform.AuthorizationProvider().AuthorizationExpiration(), c.Request().RemoteAddr)
 	if status != http.StatusOK {
-		return api.ErrorResponse(c, status, err)
+		return ErrorResponse(c, status, err)
 	}
 
-	req.Token = auth.Token
-	req.ClientID = auth.ClientID
+	req.Token = ath.Token
+	req.ClientID = ath.ClientID
 
-	return api.StandardResponse(c, status, req)
+	return StandardResponse(c, status, req)
 }

@@ -7,6 +7,7 @@ import (
 	h "net/http"
 
 	//"github.com/txsvc/platform/v2/auth"
+	"github.com/txsvc/platform/v2/auth"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
@@ -43,6 +44,7 @@ type (
 		httpContextProvider    http.HttpRequestContextProvider
 		backgroundTaskProvider tasks.HttpTaskProvider
 		metricsProvdider       metrics.MetricsProvider
+		authProvider           auth.AuthorizationProvider
 
 		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
@@ -56,14 +58,19 @@ var (
 )
 
 func init() {
+	reset()
+}
+
+func reset() {
 	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
 	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
 	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
 	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
 	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newDefaultProvider)
 	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
+	nullAuthConfig := WithProvider("platform.null.auth", ProviderTypeAuth, newDefaultProvider)
 
-	p, err := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig)
+	p, err := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig, nullAuthConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,6 +90,8 @@ func (l ProviderType) String() string {
 		return "TASK"
 	case ProviderTypeMetrics:
 		return "METRICS"
+	case ProviderTypeAuth:
+		return "AUTH"
 	default:
 		panic("unsupported")
 	}
@@ -133,8 +142,8 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
 		case ProviderTypeMetrics:
 			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
-			//case ProviderTypeAuth:
-			//	opt.Impl(opt.ID).(auth.AuthorizationProvider)
+		case ProviderTypeAuth:
+			p.authProvider = opt.Impl(opt.ID).(auth.AuthorizationProvider)
 		}
 	}
 	return nil
@@ -205,4 +214,8 @@ func NewHttpContext(req *h.Request) context.Context {
 // NewTask schedules a new http background task
 func NewTask(task tasks.HttpTask) error {
 	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
+}
+
+func AuthorizationProvider() auth.AuthorizationProvider {
+	return platform.authProvider
 }

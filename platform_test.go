@@ -21,18 +21,6 @@ func (c *TestProviderImpl) NewHttpContext(req *http.Request) context.Context {
 	return context.Background()
 }
 
-func resetPlatform() {
-	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
-	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
-	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
-	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
-	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newDefaultProvider)
-	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
-
-	p, _ := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig)
-	platform = p
-}
-
 func TestWithProvider(t *testing.T) {
 	opt := WithProvider("test", ProviderTypeLogger, newTestProvider)
 	assert.NotNil(t, opt)
@@ -43,7 +31,7 @@ func TestWithProvider(t *testing.T) {
 }
 
 func TestInitDefaultPlatform(t *testing.T) {
-	resetPlatform()
+	reset()
 
 	p := DefaultPlatform()
 
@@ -52,19 +40,30 @@ func TestInitDefaultPlatform(t *testing.T) {
 	assert.NotNil(t, p.httpContextProvider)
 	assert.NotNil(t, p.backgroundTaskProvider)
 	assert.NotNil(t, p.metricsProvdider)
-
+	assert.NotNil(t, p.authProvider)
 }
 
 func TestInitPlatform(t *testing.T) {
-	resetPlatform()
+	reset()
 
 	p, err := InitPlatform(context.Background())
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
+
+	assert.Equal(t, 0, len(p.instances))
+	assert.Equal(t, 0, len(p.logger))
+	assert.Equal(t, 0, len(p.providers))
+
+	assert.Nil(t, p.errorReportingProvider)
+	assert.Nil(t, p.httpContextProvider)
+	assert.Nil(t, p.backgroundTaskProvider)
+	assert.Nil(t, p.metricsProvdider)
+	assert.Nil(t, p.authProvider)
+
 }
 
 func TestInitPlatformDuplicateProvider(t *testing.T) {
-	resetPlatform()
+	reset()
 
 	opt1 := WithProvider("test1", ProviderTypeLogger, newTestProvider)
 	opt2 := WithProvider("test2", ProviderTypeLogger, newTestProvider)
@@ -75,7 +74,7 @@ func TestInitPlatformDuplicateProvider(t *testing.T) {
 }
 
 func TestRegisterPlatform(t *testing.T) {
-	resetPlatform()
+	reset()
 
 	defaultPlatform := DefaultPlatform()
 	p, err := InitPlatform(context.Background())
@@ -96,7 +95,7 @@ func TestRegisterPlatform(t *testing.T) {
 }
 
 func TestInitLogger(t *testing.T) {
-	resetPlatform()
+	reset()
 
 	p := DefaultPlatform()
 
@@ -108,7 +107,7 @@ func TestInitLogger(t *testing.T) {
 }
 
 func TestRegisterProvider(t *testing.T) {
-	resetPlatform()
+	reset()
 
 	opt := WithProvider("test", ProviderTypeLogger, newTestProvider)
 	assert.NotNil(t, opt)
@@ -122,4 +121,13 @@ func TestRegisterProvider(t *testing.T) {
 	err = p.RegisterProviders(true, opt)
 	assert.NoError(t, err)
 
+}
+
+func TestInitAuthorizationProvider(t *testing.T) {
+	reset()
+
+	p := DefaultPlatform()
+
+	assert.NotNil(t, p.authProvider)
+	assert.NotNil(t, AuthorizationProvider())
 }

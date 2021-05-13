@@ -15,7 +15,6 @@ import (
 	"github.com/txsvc/platform/v2/logging"
 	"github.com/txsvc/platform/v2/metrics"
 	"github.com/txsvc/platform/v2/pkg/account"
-	"github.com/txsvc/platform/v2/pkg/timestamp"
 	"github.com/txsvc/platform/v2/tasks"
 )
 
@@ -39,7 +38,7 @@ var (
 	DefaultContextConfig        platform.PlatformOpts = platform.WithProvider("platform.default.context", platform.ProviderTypeHttpContext, NewLocalProvider)
 	DefaultTaskConfig           platform.PlatformOpts = platform.WithProvider("platform.default.task", platform.ProviderTypeTask, NewLocalProvider)
 	DefaultMetricsConfig        platform.PlatformOpts = platform.WithProvider("platform.default.metrics", platform.ProviderTypeMetrics, NewLocalProvider)
-	DefaultAuthConfig           platform.PlatformOpts = platform.WithProvider("platform.default.auth", platform.ProviderTypeAuth, auth.NewAuthorizationProvider)
+	DefaultAuthConfig           platform.PlatformOpts = platform.WithProvider("platform.default.auth", platform.ProviderTypeAuth, NewLocalProvider)
 
 	errorReportingClient *LocalErrorReportingProviderImpl
 
@@ -54,8 +53,6 @@ var (
 	_ errorreporting.ErrorReportingProvider = (*LocalErrorReportingProviderImpl)(nil)
 	_ platform.GenericProvider              = (*LocalLoggingProviderImpl)(nil)
 	_ logging.LoggingProvider               = (*LocalLoggingProviderImpl)(nil)
-	_ metrics.MetricsProvider               = (*LocalProviderImpl)(nil)
-	_ tasks.HttpTaskProvider                = (*LocalProviderImpl)(nil)
 )
 
 func init() {
@@ -73,7 +70,7 @@ func init() {
 }
 
 func InitLocalProviders() {
-	p, err := platform.InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultTaskConfig, DefaultMetricsConfig)
+	p, err := platform.InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultTaskConfig, DefaultMetricsConfig, DefaultAuthConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -168,10 +165,6 @@ func (t *LocalProviderImpl) CreateHttpTask(ctx context.Context, task tasks.HttpT
 	return fmt.Errorf("not implemented")
 }
 
-func NewLocalAuthorizationProvider(ID string) interface{} {
-	return &LocalProviderImpl{}
-}
-
 // SendAccountChallenge sends a notification to the user promting to confirm the account
 func (a *LocalProviderImpl) SendAccountChallenge(ctx context.Context, account *account.Account) error {
 	return nil
@@ -180,28 +173,6 @@ func (a *LocalProviderImpl) SendAccountChallenge(ctx context.Context, account *a
 // SendAuthToken sends a notification to the user with the current authentication token
 func (a *LocalProviderImpl) SendAuthToken(ctx context.Context, account *account.Account) error {
 	return nil
-}
-
-func (a *LocalProviderImpl) CreateAuthorization(account *account.Account, req *auth.AuthorizationRequest) *auth.Authorization {
-	now := timestamp.Now()
-	scope := auth.DefaultScope
-	if req.Scope != "" {
-		scope = req.Scope
-	}
-
-	aa := auth.Authorization{
-		ClientID:  account.ClientID,
-		Realm:     req.Realm,
-		Token:     auth.CreateSimpleToken(),
-		TokenType: auth.DefaultTokenType,
-		UserID:    req.UserID,
-		Scope:     scope,
-		Revoked:   false,
-		Expires:   now + (auth.DefaultAuthorizationExpiration * 86400),
-		Created:   now,
-		Updated:   now,
-	}
-	return &aa
 }
 
 func (a *LocalProviderImpl) Scope() string {

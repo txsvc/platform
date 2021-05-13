@@ -10,18 +10,12 @@ import (
 
 	"github.com/txsvc/platform/v2/pkg/account"
 	ds "github.com/txsvc/platform/v2/pkg/datastore"
-	"github.com/txsvc/platform/v2/pkg/id"
 	"github.com/txsvc/platform/v2/pkg/timestamp"
 )
 
 const (
 	// DatastoreAuthorizations collection AUTHORIZATION
 	datastoreAuthorizations string = "AUTHORIZATIONS"
-)
-
-type (
-	AuthorizationProviderImpl struct {
-	}
 )
 
 // IsValid verifies that the Authorization is still valid, i.e. is not expired and not revoked.
@@ -38,47 +32,6 @@ func (a *Authorization) IsValid() bool {
 // HasAdminScope checks if the authorization includes scope 'api:admin'
 func (a *Authorization) HasAdminScope() bool {
 	return strings.Contains(a.Scope, ScopeAPIAdmin)
-}
-
-// GetBearerToken extracts the bearer token
-func GetBearerToken(r *http.Request) (string, error) {
-
-	// FIXME optimize this !!
-
-	auth := r.Header.Get("Authorization")
-	if len(auth) == 0 {
-		return "", ErrNoToken
-	}
-
-	parts := strings.Split(auth, " ")
-	if len(parts) != 2 {
-		return "", ErrNoToken
-	}
-	if parts[0] == "Bearer" {
-		return parts[1], nil
-	}
-
-	return "", ErrNoToken
-}
-
-// GetClientID extracts the ClientID from the token
-func GetClientID(ctx context.Context, r *http.Request) (string, error) {
-	token, err := GetBearerToken(r)
-	if err != nil {
-		return "", err
-	}
-
-	// FIXME optimize this, e.g. implement caching
-
-	auth, err := FindAuthorizationByToken(ctx, token)
-	if err != nil {
-		return "", err
-	}
-	if auth == nil {
-		return "", ErrNotAuthorized
-	}
-
-	return auth.ClientID, nil
 }
 
 // CheckAuthorization relies on the presence of a bearer token and validates the
@@ -109,6 +62,24 @@ func CheckAuthorization(ctx context.Context, c echo.Context, scope string) (*Aut
 	}
 
 	return auth, nil
+}
+
+func NewAuthorization(account *account.Account, req *AuthorizationRequest, expires int) *Authorization {
+	now := timestamp.Now()
+
+	a := Authorization{
+		ClientID:  account.ClientID,
+		Realm:     req.Realm,
+		Token:     CreateSimpleToken(),
+		TokenType: DefaultTokenType,
+		UserID:    req.UserID,
+		Scope:     req.Scope,
+		Revoked:   false,
+		Expires:   now + int64(expires*86400),
+		Created:   now,
+		Updated:   now,
+	}
+	return &a
 }
 
 // CreateAuthorization creates all data needed for the auth fu
@@ -165,9 +136,56 @@ func FindAuthorizationByToken(ctx context.Context, token string) (*Authorization
 	return auth[0], nil
 }
 
-func CreateSimpleToken() string {
-	token, _ := id.UUID()
-	return token
+// ExchangeToken confirms the temporary auth token and creates the permanent one
+func ExchangeToken(ctx context.Context, req *AuthorizationRequest, expires int, loginFrom string) (*Authorization, int, error) {
+	var auth *Authorization
+
+	acc, err := account.FindAccountByUserID(ctx, req.Realm, req.UserID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	if acc == nil {
+		return nil, http.StatusNotFound, nil
+	}
+	now := timestamp.Now()
+	if acc.Expires < now || acc.Token != req.Token {
+		return nil, http.StatusUnauthorized, nil
+	}
+
+	// all OK, create or update the authorization
+	auth, err = LookupAuthorization(ctx, acc.Realm, acc.ClientID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err // FIXME maybe use a different code here
+	}
+	if auth == nil {
+		if req.Scope == "" {
+			return nil, http.StatusBadRequest, ErrNoScope
+		}
+		auth = NewAuthorization(acc, req, expires)
+	}
+	auth.Token = CreateSimpleToken()
+	auth.Expires = now + (int64(expires) * 86400)
+	auth.Updated = now
+
+	err = CreateAuthorization(ctx, auth)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	// update the account
+	acc.Status = account.AccountActive
+	acc.LastLogin = now
+	acc.LoginCount = acc.LoginCount + 1
+	acc.LoginFrom = loginFrom
+	acc.Token = ""
+	acc.Expires = 0 // never
+
+	err = account.UpdateAccount(ctx, acc)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return auth, http.StatusOK, nil
 }
 
 // authorizationKey creates a datastore key for a workspace authorization based on the team_id.

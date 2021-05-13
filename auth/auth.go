@@ -3,17 +3,14 @@ package auth
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strings"
 
 	"github.com/txsvc/platform/v2/pkg/account"
-	"github.com/txsvc/platform/v2/pkg/timestamp"
+	"github.com/txsvc/platform/v2/pkg/id"
 )
 
 const (
-	MsgAuthenticationNotFound = "account '%s' not found"
-
-	// FIXME
-	DefaultEndpoint = "https://podops.dev"
-
 	// AuthTypeSimpleToken constant token
 	AuthTypeSimpleToken = "token"
 	// AuthTypeJWT constant jwt
@@ -21,19 +18,23 @@ const (
 	// AuthTypeSlack constant slack
 	AuthTypeSlack = "slack"
 
-	// DefaultAuthenticationExpiration in minutes. Used when sending an
-	// account challenge or the temporary token.
-	DefaultAuthenticationExpiration = 10
-	// DefaultAuthorizationExpiration in days
-	DefaultAuthorizationExpiration = 90
-
 	// other defaults
 	DefaultTokenType = "user" // other possibilities: app, bot, ...
 
 	// default scopes
+	DefaultScope  = "api:read,api:write"
 	ScopeAPIAdmin = "api:admin"
-	// FIXME DefaultScope  = "api:read,api:write"
-	DefaultScope = "production:read,production:write,production:build,resource:read,resource:write"
+
+	// DefaultAuthenticationExpiration in minutes. Used when sending an account challenge or the temporary token.
+	DefaultAuthenticationExpiration = 10
+	// DefaultAuthorizationExpiration in days
+	DefaultAuthorizationExpiration = 90
+
+	// DefaultEndpoint is used to build the urls in the notifications
+	DefaultEndpoint = "http://localhost"
+
+	// error messages
+	MsgAuthenticationNotFound = "account '%s' not found"
 )
 
 type (
@@ -62,19 +63,17 @@ type (
 	}
 
 	AuthorizationProvider interface {
-		// CreateAuthorization creates a new Authorization that is application/service specific
-		CreateAuthorization(*account.Account, *AuthorizationRequest) *Authorization
 		// Send an account challenge to confirm the account
 		SendAccountChallenge(context.Context, *account.Account) error
 		// Send the new token
 		SendAuthToken(context.Context, *account.Account) error
-		// Scope returns the scope
+		// Scope returns the default scope
 		Scope() string
-		// Endpoint returns the api endpoint url
+		// Endpoint returns the default endpoint url
 		Endpoint() string
-		// AuthenticationExpiration
+		// AuthenticationExpiration in minutes
 		AuthenticationExpiration() int
-		// AuthorizationExpiration
+		// AuthorizationExpiration in days
 		AuthorizationExpiration() int
 	}
 )
@@ -84,69 +83,54 @@ var (
 	ErrNotAuthorized = errors.New("not authorized")
 	// ErrNoToken indicates that no bearer token was provided
 	ErrNoToken = errors.New("no token provided")
+	// ErrNoScope indicates that no scope was provided
+	ErrNoScope = errors.New("no scope provided")
 	// ErrInvalidRoute indicates that the route and/or its parameters are not valid
 	ErrInvalidRoute = errors.New("invalid route")
-
-	// the default authentication provider instance
-	authProvider *AuthorizationProviderImpl
 )
 
-func init() {
-	authProvider = NewAuthorizationProvider("platform.null.auth").(*AuthorizationProviderImpl)
+func CreateSimpleToken() string {
+	token, _ := id.UUID()
+	return token
 }
 
-func NewAuthorizationProvider(ID string) interface{} {
-	return &AuthorizationProviderImpl{}
-}
+// GetBearerToken extracts the bearer token
+func GetBearerToken(r *http.Request) (string, error) {
 
-func (auth *AuthorizationProviderImpl) Close() error {
-	return nil
-}
+	// FIXME optimize this !!
 
-func (auth *AuthorizationProviderImpl) CreateAuthorization(account *account.Account, req *AuthorizationRequest) *Authorization {
-	now := timestamp.Now()
-	scope := DefaultScope
-	if req.Scope != "" {
-		scope = req.Scope
+	auth := r.Header.Get("Authorization")
+	if len(auth) == 0 {
+		return "", ErrNoToken
 	}
 
-	a := Authorization{
-		ClientID:  account.ClientID,
-		Realm:     req.Realm,
-		Token:     CreateSimpleToken(),
-		TokenType: DefaultTokenType,
-		UserID:    req.UserID,
-		Scope:     scope,
-		Revoked:   false,
-		Expires:   now + (DefaultAuthorizationExpiration * 86400),
-		Created:   now,
-		Updated:   now,
+	parts := strings.Split(auth, " ")
+	if len(parts) != 2 {
+		return "", ErrNoToken
 	}
-	return &a
+	if parts[0] == "Bearer" {
+		return parts[1], nil
+	}
+
+	return "", ErrNoToken
 }
 
-// SendAccountChallenge sends a notification to the user promting to confirm the account
-func (auth *AuthorizationProviderImpl) SendAccountChallenge(ctx context.Context, account *account.Account) error {
-	return nil
-}
+// GetClientID extracts the ClientID from the token
+func GetClientID(ctx context.Context, r *http.Request) (string, error) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		return "", err
+	}
 
-// SendAuthToken sends a notification to the user with the current authentication token
-func (auth *AuthorizationProviderImpl) SendAuthToken(ctx context.Context, account *account.Account) error {
-	return nil
-}
+	// FIXME optimize this, e.g. implement caching
 
-func (auth *AuthorizationProviderImpl) Scope() string {
-	return DefaultScope
-}
+	auth, err := FindAuthorizationByToken(ctx, token)
+	if err != nil {
+		return "", err
+	}
+	if auth == nil {
+		return "", ErrNotAuthorized
+	}
 
-func (auth *AuthorizationProviderImpl) Endpoint() string {
-	return DefaultEndpoint
-}
-
-func (auth *AuthorizationProviderImpl) AuthenticationExpiration() int {
-	return DefaultAuthenticationExpiration
-}
-
-func (auth *AuthorizationProviderImpl) AuthorizationExpiration() int {
-	return DefaultAuthorizationExpiration
+	return auth.ClientID, nil
 }

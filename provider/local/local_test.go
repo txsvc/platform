@@ -83,3 +83,15 @@ func TestDefaultTasks(t *testing.T) {
 	err := platform.NewTask(task)
 	assert.Error(t, err)
 }
+
+func TestDefaultAuthorizationProvider(t *testing.T) {
+	InitLocalProviders()
+
+	ap := platform.AuthorizationProvider()
+
+	assert.NotNil(t, ap)
+	assert.NotEqual(t, 0, ap.AuthenticationExpiration())
+	assert.NotEqual(t, 0, ap.AuthorizationExpiration())
+	assert.NotEmpty(t, ap.Endpoint())
+	assert.NotEmpty(t, ap.Scope())
+}
