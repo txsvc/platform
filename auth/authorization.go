@@ -164,6 +164,7 @@ func ExchangeToken(ctx context.Context, req *AuthorizationRequest, expires int, 
 		auth = NewAuthorization(acc, req, expires)
 	}
 	auth.Token = CreateSimpleToken()
+	auth.Revoked = false
 	auth.Expires = now + (int64(expires) * 86400)
 	auth.Updated = now
 
