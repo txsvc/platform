@@ -79,7 +79,7 @@ func ConfirmLoginChallenge(ctx context.Context, token string) (*account.Account,
 
 	acc.Confirmed = now
 	acc.Status = account.AccountLoggedOut
-	acc.Ext1 = ""
+	acc.Token = ""
 
 	err = account.UpdateAccount(ctx, acc)
 	if err != nil {
@@ -101,7 +101,7 @@ func exchangeToken(ctx context.Context, req *AuthorizationRequest, loginFrom str
 		return nil, http.StatusNotFound, nil
 	}
 	now := timestamp.Now()
-	if acc.Expires < now || acc.Ext2 != req.Token {
+	if acc.Expires < now || acc.Token != req.Token {
 		return nil, http.StatusUnauthorized, nil
 	}
 
@@ -130,9 +130,8 @@ func exchangeToken(ctx context.Context, req *AuthorizationRequest, loginFrom str
 	acc.LastLogin = now
 	acc.LoginCount = acc.LoginCount + 1
 	acc.LoginFrom = loginFrom
-	acc.Ext1 = ""
-	acc.Ext2 = ""
-	acc.Expires = 0
+	acc.Token = ""
+	acc.Expires = 0 // never
 
 	err = account.UpdateAccount(ctx, acc)
 	if err != nil {

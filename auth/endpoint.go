@@ -76,7 +76,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	}
 
 	// create and send the auth token
-	acc, err = account.ResetAuthToken(ctx, acc, authProvider.AuthenticationExpiration())
+	acc, err = account.ResetTemporaryToken(ctx, acc, authProvider.AuthenticationExpiration())
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -157,7 +157,7 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 		return api.ErrorResponse(c, status, err)
 	}
 
-	acc, err = account.ResetAuthToken(ctx, acc, authProvider.AuthenticationExpiration())
+	acc, err = account.ResetTemporaryToken(ctx, acc, authProvider.AuthenticationExpiration())
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}

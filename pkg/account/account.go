@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"errors"
 
 	"cloud.google.com/go/datastore"
 
@@ -11,12 +12,12 @@ import (
 )
 
 const (
-	// AccountActive indicates a confirmed account with a valid login
+	// AccountActive indicates a confirmed account with a valid login & authorization
 	AccountActive = 1
-	// AccountLoggedOut indicates a confirmed account without a valid login
+	// AccountLoggedOut indicates a confirmed account that is not logged in
 	AccountLoggedOut = 0
-	// AccountDeactivated indicates an account that has been deactivated due to
-	// e.g. account deletion or UserID swap
+
+	// AccountDeactivated indicates an account that has been deactivated due to e.g. account deletion or UserID swap
 	AccountDeactivated = -1
 	// AccountBlocked signals an issue with the account that needs intervention
 	AccountBlocked = -2
@@ -40,8 +41,7 @@ type (
 		LoginCount int    `json:"-"`
 		LoginFrom  string `json:"-"`
 		// internal
-		Ext1      string `json:"-"` // universal field, used as needed. e.g to confirm the account and then to request the real token
-		Ext2      string `json:"-"`
+		Token     string `json:"-"` // a temporary token to confirm the account or to exchanged for the "real" token
 		Expires   int64  `json:"-"` // 0 == never
 		Confirmed int64  `json:"-"`
 		Created   int64  `json:"-"`
@@ -49,18 +49,31 @@ type (
 	}
 )
 
+var (
+	// ErrAccountExists indicates that the account already exists and can't be created
+	ErrAccountExists = errors.New("account exists")
+)
+
 // CreateAccount creates an new account within a given realm
 func CreateAccount(ctx context.Context, realm, userID string, expires int) (*Account, error) {
+	acc, err := FindAccountByUserID(ctx, realm, userID)
+	if err != nil {
+		return nil, err
+	}
+	if acc != nil {
+		return nil, ErrAccountExists
+	}
+
 	now := timestamp.Now()
-	token, _ := id.ShortUUID()
-	uid, _ := id.ShortUUID() // FIXME verify that uid is unique
+	token, _ := id.ShortUUID() // temporary token to confirm the new account. this is not an authorization token or such!
+	uid, _ := id.ShortUUID()   // FIXME verify that uid is unique
 
 	account := Account{
 		Realm:     realm,
 		UserID:    userID,
 		ClientID:  uid,
 		Status:    AccountUnconfirmed,
-		Ext1:      token,
+		Token:     token,
 		Expires:   timestamp.IncT(timestamp.Now(), expires),
 		Confirmed: 0,
 		Created:   now,
@@ -113,7 +126,7 @@ func FindAccountByUserID(ctx context.Context, realm, userID string) (*Account, e
 // FindAccountByToken retrieves an account bases on either the temporary token or the auth token
 func FindAccountByToken(ctx context.Context, token string) (*Account, error) {
 	var accounts []*Account
-	if _, err := ds.DataStore().GetAll(ctx, datastore.NewQuery(datastoreAccounts).Filter("Ext1 =", token), &accounts); err != nil {
+	if _, err := ds.DataStore().GetAll(ctx, datastore.NewQuery(datastoreAccounts).Filter("Token =", token), &accounts); err != nil {
 		return nil, err
 	}
 	if accounts == nil {
@@ -126,7 +139,7 @@ func FindAccountByToken(ctx context.Context, token string) (*Account, error) {
 func ResetAccountChallenge(ctx context.Context, acc *Account, expires int) (*Account, error) {
 	token, _ := id.ShortUUID()
 	acc.Expires = timestamp.IncT(timestamp.Now(), expires)
-	acc.Ext1 = token
+	acc.Token = "ac." + token
 	acc.Status = AccountUnconfirmed
 
 	if err := UpdateAccount(ctx, acc); err != nil {
@@ -135,11 +148,11 @@ func ResetAccountChallenge(ctx context.Context, acc *Account, expires int) (*Acc
 	return acc, nil
 }
 
-// ResetAuthToken creates a new temporary token and resets the timer
-func ResetAuthToken(ctx context.Context, acc *Account, expires int) (*Account, error) {
+// ResetTemporaryToken creates a new temporary token and resets the timer
+func ResetTemporaryToken(ctx context.Context, acc *Account, expires int) (*Account, error) {
 	token, _ := id.ShortUUID()
 	acc.Expires = timestamp.IncT(timestamp.Now(), expires)
-	acc.Ext2 = token
+	acc.Token = "tt." + token
 	acc.Status = AccountLoggedOut
 
 	if err := UpdateAccount(ctx, acc); err != nil {

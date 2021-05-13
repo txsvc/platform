@@ -35,10 +35,10 @@ func TestLoginScenario1(t *testing.T) {
 	loginStep1(t, http.StatusCreated) // new account, request login, create the account
 
 	acc := getAccount(t)
-	loginStep2(t, acc.Ext1, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
+	loginStep2(t, acc.Token, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
 
 	acc = getAccount(t)
-	loginStep3(t, realm, userID, acc.ClientID, acc.Ext2, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
+	loginStep3(t, realm, userID, acc.ClientID, acc.Token, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
 
 	verifyAccountAndAuth(t)
 
@@ -57,12 +57,12 @@ func TestLoginScenario2(t *testing.T) {
 	account2 := getAccount(t)
 
 	// requires a new token
-	assert.NotEqual(t, account1.Ext1, account2.Ext1)
+	assert.NotEqual(t, account1.Token, account2.Token)
 
-	loginStep2(t, account2.Ext1, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
+	loginStep2(t, account2.Token, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
 
 	account3 := getAccount(t)
-	loginStep3(t, realm, userID, account3.ClientID, account3.Ext2, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
+	loginStep3(t, realm, userID, account3.ClientID, account3.Token, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
 
 	verifyAccountAndAuth(t)
 }
@@ -74,13 +74,13 @@ func TestLoginScenario3(t *testing.T) {
 	loginStep1(t, http.StatusCreated) // new account, request login, create the account
 
 	acc := getAccount(t)
-	token := acc.Ext1
+	token := acc.Token
 
 	loginStep2(t, token, http.StatusTemporaryRedirect, true) // confirm the new acc, send auth token
 	loginStep2(t, token, http.StatusUnauthorized, true)      // confirm again
 
 	acc = getAccount(t)
-	loginStep3(t, realm, userID, acc.ClientID, acc.Ext2, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
+	loginStep3(t, realm, userID, acc.ClientID, acc.Token, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
 
 	verifyAccountAndAuth(t)
 }
@@ -92,10 +92,10 @@ func TestLoginScenario4(t *testing.T) {
 	loginStep1(t, http.StatusCreated) // new account, request login, create the account
 
 	acc := getAccount(t)
-	loginStep2(t, acc.Ext1, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
+	loginStep2(t, acc.Token, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
 
 	acc = getAccount(t)
-	token := acc.Ext2
+	token := acc.Token
 
 	loginStep3(t, realm, userID, acc.ClientID, token, account.AccountActive, http.StatusOK, true) // exchange auth token for a permanent token
 
@@ -120,11 +120,11 @@ func TestLoginScenario6(t *testing.T) {
 	loginStep1(t, http.StatusCreated) // new account, request login, create the account
 
 	acc := getAccount(t)
-	loginStep2(t, acc.Ext1, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
+	loginStep2(t, acc.Token, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
 
 	acc = getAccount(t)
 	loginStep3(t, "", "", "", "", account.AccountLoggedOut, http.StatusBadRequest, false)
-	loginStep3(t, "wrong_realm", "wrong_user", acc.ClientID, acc.Ext2, account.AccountLoggedOut, http.StatusNotFound, false)
+	loginStep3(t, "wrong_realm", "wrong_user", acc.ClientID, acc.Token, account.AccountLoggedOut, http.StatusNotFound, false)
 	loginStep3(t, realm, userID, acc.ClientID, "wrong_auth_token", account.AccountLoggedOut, http.StatusUnauthorized, false)
 }
 
@@ -144,7 +144,7 @@ func loginStep1(t *testing.T, status int) {
 
 	if assert.NoError(t, err) {
 		acc := getAccount(t)
-		assert.NotEqual(t, int64(0), acc.Ext1)
+		assert.NotEqual(t, int64(0), acc.Token)
 		assert.Equal(t, status, rec.Result().StatusCode)
 	}
 }
@@ -169,7 +169,7 @@ func loginStep2(t *testing.T, token string, status int, validate bool) {
 			acc := getAccount(t)
 			assert.NotEqual(t, int64(0), acc.Confirmed)
 			assert.Equal(t, account.AccountLoggedOut, acc.Status)
-			assert.NotEqual(t, int64(0), acc.Ext2)
+			assert.NotEqual(t, int64(0), acc.Token)
 		}
 	}
 }
@@ -189,8 +189,7 @@ func loginStep3(t *testing.T, testRealm, testUser, testClient, testToken string,
 		if validate {
 			acc := getAccount(t)
 			assert.Equal(t, state, acc.Status)
-			assert.Equal(t, "", acc.Ext1)
-			assert.Equal(t, "", acc.Ext2)
+			assert.Equal(t, "", acc.Token)
 		}
 	}
 }
