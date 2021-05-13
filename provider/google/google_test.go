@@ -30,7 +30,7 @@ func TestGoogleErrorReporting(t *testing.T) {
 	}
 }
 
-func TestCloudTasks(t *testing.T) {
+func TTestCloudTasks(t *testing.T) {
 	require.True(t, env.Assert("PROJECT_ID"))
 	require.True(t, env.Assert("GOOGLE_APPLICATION_CREDENTIALS"))
 

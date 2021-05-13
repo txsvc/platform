@@ -113,7 +113,7 @@ func NewStackdriverErrorReportingProvider(ID string) interface{} {
 			log.Printf("could not log error: %v", err)
 		},
 	})
-	if err != nil {
+	if err != nil || ec == nil {
 		log.Fatal(err)
 	}
 
@@ -123,7 +123,9 @@ func NewStackdriverErrorReportingProvider(ID string) interface{} {
 }
 
 func (er *GoogleErrorReportingProviderImpl) ReportError(e error) {
-	er.client.Report(stackdriver_error.Entry{Error: e})
+	if e != nil {
+		er.client.Report(stackdriver_error.Entry{Error: e})
+	}
 }
 
 func (c *GoogleErrorReportingProviderImpl) Close() error {

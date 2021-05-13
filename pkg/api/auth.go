@@ -72,7 +72,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	}
 	if acc.Status != 0 {
 		// status 403: only logged-out and confirmed users can proceed, do nothing otherwise
-		return ErrorResponse(c, http.StatusForbidden, err)
+		return ErrorResponse(c, http.StatusForbidden, auth.ErrAlreadyAuthorized)
 	}
 
 	// create and send the auth token
