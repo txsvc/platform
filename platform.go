@@ -6,6 +6,7 @@ import (
 	"log"
 	h "net/http"
 
+	//"github.com/txsvc/platform/v2/auth"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
@@ -132,6 +133,8 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
 		case ProviderTypeMetrics:
 			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
+			//case ProviderTypeAuth:
+			//	opt.Impl(opt.ID).(auth.AuthorizationProvider)
 		}
 	}
 	return nil

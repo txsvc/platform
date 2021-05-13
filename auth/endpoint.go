@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/txsvc/platform/v2"
 
-	a "github.com/txsvc/platform/v2/pkg/account"
+	"github.com/txsvc/platform/v2/pkg/account"
 	"github.com/txsvc/platform/v2/pkg/api"
 )
 
@@ -34,20 +34,20 @@ func LoginRequestEndpoint(c echo.Context) error {
 		return api.ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	account, err := a.FindAccountByUserID(ctx, req.Realm, req.UserID)
+	acc, err := account.FindAccountByUserID(ctx, req.Realm, req.UserID)
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	// new account
-	if account == nil {
+	if acc == nil {
 		// #1: create a new account
-		account, err = a.CreateAccount(ctx, req.Realm, req.UserID, authProvider.AuthorizationExpiration())
+		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, authProvider.AuthenticationExpiration())
 		if err != nil {
 			return api.ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the confirmation link
-		err = authProvider.SendAccountChallenge(ctx, account)
+		err = authProvider.SendAccountChallenge(ctx, acc)
 		if err != nil {
 			return api.ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -56,31 +56,31 @@ func LoginRequestEndpoint(c echo.Context) error {
 	}
 
 	// existing account but check some stuff first ...
-	if account.Confirmed == 0 {
+	if acc.Confirmed == 0 {
 		// #1: update the expiration timestamp
-		account, err = a.ResetAccountChallenge(ctx, account, authProvider.AuthorizationExpiration())
+		acc, err = account.ResetAccountChallenge(ctx, acc, authProvider.AuthenticationExpiration())
 		if err != nil {
 			return api.ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the account confirmation link
-		err = authProvider.SendAccountChallenge(ctx, account)
+		err = authProvider.SendAccountChallenge(ctx, acc)
 		if err != nil {
 			return api.ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// status 201: new account
 		return c.NoContent(http.StatusCreated)
 	}
-	if account.Status != 0 {
+	if acc.Status != 0 {
 		// status 403: only logged-out and confirmed users can proceed, do nothing otherwise
 		return api.ErrorResponse(c, http.StatusForbidden, err)
 	}
 
 	// create and send the auth token
-	account, err = ResetAuthToken(ctx, account)
+	acc, err = account.ResetAuthToken(ctx, acc, authProvider.AuthenticationExpiration())
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
-	err = authProvider.SendAuthToken(ctx, account)
+	err = authProvider.SendAuthToken(ctx, acc)
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -117,20 +117,20 @@ func LogoutRequestEndpoint(c echo.Context) error {
 		return api.ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	account, err := a.LookupAccount(ctx, auth.Realm, auth.ClientID)
+	acc, err := account.LookupAccount(ctx, auth.Realm, auth.ClientID)
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
-	if account == nil {
+	if acc == nil {
 		return api.ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	if account.Status < 0 {
+	if acc.Status < 0 {
 		return c.NoContent(http.StatusForbidden) // account is blocked or deactivated etc ...
 	}
 	// if we made until here, logout shoud be OK
-	account.Status = a.AccountLoggedOut
-	if err := a.UpdateAccount(ctx, account); err != nil {
+	acc.Status = account.AccountLoggedOut
+	if err := account.UpdateAccount(ctx, acc); err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -152,17 +152,17 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 		return api.ErrorResponse(c, http.StatusBadRequest, ErrInvalidRoute)
 	}
 
-	account, status, err := ConfirmLoginChallenge(ctx, token)
+	acc, status, err := ConfirmLoginChallenge(ctx, token)
 	if status != http.StatusNoContent {
 		return api.ErrorResponse(c, status, err)
 	}
 
-	account, err = ResetAuthToken(ctx, account)
+	acc, err = account.ResetAuthToken(ctx, acc, authProvider.AuthenticationExpiration())
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	err = authProvider.SendAuthToken(ctx, account)
+	err = authProvider.SendAuthToken(ctx, acc)
 	if err != nil {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}

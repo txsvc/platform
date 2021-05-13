@@ -6,22 +6,8 @@ import (
 	"net/http"
 
 	"github.com/txsvc/platform/v2/pkg/account"
-	"github.com/txsvc/platform/v2/pkg/id"
 	"github.com/txsvc/platform/v2/pkg/timestamp"
 )
-
-// ResetAuthToken creates a new authorization token and resets the timer
-func ResetAuthToken(ctx context.Context, acc *account.Account) (*account.Account, error) {
-	token, _ := id.ShortUUID()
-	acc.Expires = timestamp.IncT(timestamp.Now(), authProvider.AuthenticationExpiration())
-	acc.Ext2 = token
-	acc.Status = account.AccountLoggedOut
-
-	if err := account.UpdateAccount(ctx, acc); err != nil {
-		return nil, err
-	}
-	return acc, nil
-}
 
 func LogoutAccount(ctx context.Context, realm, clientID string) error {
 	acc, err := account.LookupAccount(ctx, realm, clientID)

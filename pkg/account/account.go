@@ -135,6 +135,19 @@ func ResetAccountChallenge(ctx context.Context, acc *Account, expires int) (*Acc
 	return acc, nil
 }
 
+// ResetAuthToken creates a new temporary token and resets the timer
+func ResetAuthToken(ctx context.Context, acc *Account, expires int) (*Account, error) {
+	token, _ := id.ShortUUID()
+	acc.Expires = timestamp.IncT(timestamp.Now(), expires)
+	acc.Ext2 = token
+	acc.Status = AccountLoggedOut
+
+	if err := UpdateAccount(ctx, acc); err != nil {
+		return nil, err
+	}
+	return acc, nil
+}
+
 func accountKey(realm, client string) *datastore.Key {
 	return datastore.NameKey(datastoreAccounts, namedKey(realm, client), nil)
 }

@@ -21,7 +21,8 @@ const (
 	// AuthTypeSlack constant slack
 	AuthTypeSlack = "slack"
 
-	// DefaultAuthenticationExpiration in minutes
+	// DefaultAuthenticationExpiration in minutes. Used when sending an
+	// account challenge or the temporary token.
 	DefaultAuthenticationExpiration = 10
 	// DefaultAuthorizationExpiration in days
 	DefaultAuthorizationExpiration = 90
