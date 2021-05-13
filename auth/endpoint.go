@@ -117,23 +117,12 @@ func LogoutRequestEndpoint(c echo.Context) error {
 		return api.ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	acc, err := account.LookupAccount(ctx, auth.Realm, auth.ClientID)
+	// logout starts here
+	status, err := LogoutAccount(ctx, auth.Realm, auth.ClientID)
 	if err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
+		return api.ErrorResponse(c, status, err)
 	}
-	if acc == nil {
-		return api.ErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	if acc.Status < 0 {
-		return c.NoContent(http.StatusForbidden) // account is blocked or deactivated etc ...
-	}
-	// if we made until here, logout shoud be OK
-	acc.Status = account.AccountLoggedOut
-	if err := account.UpdateAccount(ctx, acc); err != nil {
-		return api.ErrorResponse(c, http.StatusInternalServerError, err)
-	}
-	return c.NoContent(http.StatusNoContent)
+	return c.NoContent(status)
 }
 
 // LoginConfirmationEndpoint validates an email.
