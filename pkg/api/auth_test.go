@@ -226,7 +226,7 @@ func cleaner() {
 	if err == nil && acc != nil {
 		account.DeleteAccount(context.TODO(), acc.Realm, acc.ClientID)
 
-		k := accountKey(realm, acc.ClientID)
+		k := authorizationKey(realm, acc.ClientID)
 		ds.DataStore().Delete(context.TODO(), k)
 	}
 }
@@ -250,10 +250,6 @@ func verifyAccountAndAuth(t *testing.T) {
 			assert.Equal(t, acc.ClientID, auth.ClientID)
 		}
 	}
-}
-
-func accountKey(realm, client string) *datastore.Key {
-	return datastore.NameKey("ACCOUNTS", namedKey(realm, client), nil)
 }
 
 func authorizationKey(realm, client string) *datastore.Key {

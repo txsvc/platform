@@ -84,7 +84,7 @@ func NewAuthorization(account *account.Account, req *AuthorizationRequest, expir
 
 // UpdateAuthorization updates all data needed for the auth fu
 func UpdateAuthorization(ctx context.Context, auth *Authorization) error {
-	k := authorizationKey(auth.Realm, auth.ClientID)
+	k := nativeKey(auth.Key())
 	// FIXME add a cache ?
 
 	// we simply overwrite the existing authorization. If this is no desired, use GetAuthorization first,
@@ -96,7 +96,8 @@ func UpdateAuthorization(ctx context.Context, auth *Authorization) error {
 // LookupAuthorization looks for an authorization
 func LookupAuthorization(ctx context.Context, realm, clientID string) (*Authorization, error) {
 	var auth Authorization
-	k := authorizationKey(realm, clientID)
+
+	k := nativeKey(namedKey(realm, clientID))
 
 	// FIXME add a cache ?
 
@@ -107,6 +108,23 @@ func LookupAuthorization(ctx context.Context, realm, clientID string) (*Authoriz
 		return nil, err
 	}
 	return &auth, nil
+}
+
+func DeleteAuthorization(ctx context.Context, realm, clientID string) (*Authorization, error) {
+	auth, err := LookupAuthorization(ctx, realm, clientID)
+	if err != nil {
+		return nil, err
+	}
+	if auth == nil {
+		return nil, ErrNoAuthorization
+	}
+
+	k := nativeKey(namedKey(realm, clientID))
+	if err := ds.DataStore().Delete(ctx, k); err != nil {
+		return nil, err
+	}
+
+	return auth, nil
 }
 
 // FindAuthorizationByToken looks for an authorization by the token
@@ -177,9 +195,16 @@ func ExchangeToken(ctx context.Context, req *AuthorizationRequest, expires int, 
 	return auth, http.StatusOK, nil
 }
 
-// authorizationKey creates a datastore key for a workspace authorization based on the team_id.
-func authorizationKey(realm, client string) *datastore.Key {
-	return datastore.NameKey(datastoreAuthorizations, namedKey(realm, client), nil)
+//
+// keys, cache and dataloader
+//
+
+func (ath *Authorization) Key() string {
+	return namedKey(ath.Realm, ath.ClientID)
+}
+
+func nativeKey(key string) *datastore.Key {
+	return datastore.NameKey(datastoreAuthorizations, key, nil)
 }
 
 func namedKey(part1, part2 string) string {

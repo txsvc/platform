@@ -35,16 +35,12 @@ func ToWeekday(t int64) int {
 	return int(time.Unix(t, 0).Weekday())
 }
 
-// ToHour retuns the hour of the day for the timestamp
+// ToHour retuns the hour of the day for the timestamp, in local time
 func ToHour(t int64) int {
 	return time.Unix(t, 0).Hour()
 }
 
-// StringToTime converts a string with a date/time into a timestamp
-func StringToTime(format, t string) int64 {
-	tt, err := time.Parse(format, t)
-	if err != nil {
-		return 0
-	}
-	return tt.Unix()
+// ToHourUTC retuns the hour of the day for the timestamp, UTC time
+func ToHourUTC(t int64) int {
+	return time.Unix(t, 0).UTC().Hour()
 }

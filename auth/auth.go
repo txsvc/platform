@@ -80,9 +80,11 @@ type (
 
 var (
 	// ErrNotAuthorized indicates that the API caller is not authorized
-	ErrNotAuthorized = errors.New("not authorized")
-
+	ErrNotAuthorized     = errors.New("not authorized")
 	ErrAlreadyAuthorized = errors.New("already authorized")
+
+	// ErrNoAuthorization indicates that the authorization does not exist
+	ErrNoAuthorization = errors.New("no such authorization")
 
 	// ErrNoToken indicates that no bearer token was provided
 	ErrNoToken = errors.New("no token provided")

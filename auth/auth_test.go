@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/txsvc/platform/v2/pkg/account"
 )
 
 const (
@@ -12,7 +14,23 @@ const (
 	scopeProductionBuild = "production:build"
 	scopeResourceRead    = "resource:read"
 	scopeResourceWrite   = "resource:write"
+
+	accountTestRealm = "account_test"
+	accountTestUser  = "account_test_user"
 )
+
+func cleanup() {
+	ctx := context.TODO()
+
+	acc, _ := account.FindAccountByUserID(ctx, accountTestRealm, accountTestUser)
+	if acc != nil {
+		ath, _ := LookupAuthorization(ctx, accountTestRealm, acc.ClientID)
+		if ath != nil {
+			DeleteAuthorization(ctx, accountTestRealm, acc.ClientID)
+		}
+		account.DeleteAccount(ctx, accountTestRealm, acc.ClientID)
+	}
+}
 
 func TestScope(t *testing.T) {
 

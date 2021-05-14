@@ -7,7 +7,6 @@ import (
 	mcache "github.com/OrlovEvgeny/go-mcache"
 	"github.com/stretchr/testify/assert"
 
-	ds "github.com/txsvc/platform/v2/pkg/datastore"
 	"github.com/txsvc/platform/v2/pkg/loader"
 	"github.com/txsvc/platform/v2/pkg/timestamp"
 )
@@ -20,8 +19,7 @@ const (
 func cleanup() {
 	account, _ := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
 	if account != nil {
-		k := nativeKey(namedKey(accountTestRealm, account.ClientID))
-		ds.DataStore().Delete(context.TODO(), k)
+		DeleteAccount(context.TODO(), accountTestRealm, account.ClientID)
 	}
 
 	// reset the loader and cache
@@ -62,7 +60,6 @@ func TestDuplicateAccount(t *testing.T) {
 }
 
 func TestUpdateAccount(t *testing.T) {
-	t.Cleanup(cleanup)
 
 	account1, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
 	if assert.NoError(t, err) {
@@ -79,4 +76,32 @@ func TestUpdateAccount(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestDeleteAccount(t *testing.T) {
+
+	account, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
+	if assert.NoError(t, err) {
+		assert.NotNil(t, account)
+
+		account1, err := DeleteAccount(context.TODO(), accountTestRealm, account.ClientID)
+		if assert.NoError(t, err) {
+			assert.NotNil(t, account1)
+
+			assert.True(t, account1.Equal(account))
+
+			account2, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
+			if assert.NoError(t, err) {
+				assert.Nil(t, account2)
+			}
+
+			_, err = DeleteAccount(context.TODO(), accountTestRealm, account.ClientID)
+			assert.Error(t, err)
+			assert.Equal(t, ErrNoSuchAccount, err)
+		}
+	}
+}
+
+func TestCleanup(t *testing.T) {
+	cleanup()
 }

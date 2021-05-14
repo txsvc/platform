@@ -54,6 +54,8 @@ type (
 var (
 	// ErrAccountExists indicates that the account already exists and can't be created
 	ErrAccountExists = errors.New("account exists")
+	// ErrNoSuchAccount indicates that the account does not exist
+	ErrNoSuchAccount = errors.New("no such account")
 
 	// loader used to cache accounts
 	accountLoader = loader.New(AccountLoaderFunc, loader.DefaultTTL)
@@ -155,8 +157,14 @@ func DeleteAccount(ctx context.Context, realm, clientID string) (*Account, error
 		return nil, err
 	}
 
+	if account == nil {
+		return nil, ErrNoSuchAccount
+	}
+
 	k := nativeKey(namedKey(realm, clientID))
-	ds.DataStore().Delete(ctx, k)
+	if err := ds.DataStore().Delete(ctx, k); err != nil {
+		return nil, err
+	}
 
 	// remove from the caches
 	accountLoader.Remove(ctx, k.Encode())
@@ -241,7 +249,7 @@ func ResetTemporaryToken(ctx context.Context, acc *Account, expires int) (*Accou
 }
 
 //
-// keys and dataloader
+// keys, cache and dataloader
 //
 
 func (acc *Account) Key() string {
