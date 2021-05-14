@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/datastore v1.1.0
 	cloud.google.com/go/logging v1.3.0
 	cloud.google.com/go/storage v1.10.0
+	github.com/OrlovEvgeny/go-mcache v0.0.0-20200121124330-1a8195b34f3a
 	github.com/labstack/echo/v4 v4.2.0
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/multierr v1.6.0 // indirect
