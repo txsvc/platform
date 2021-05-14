@@ -8,6 +8,7 @@ import (
 
 	ds "github.com/txsvc/platform/v2/pkg/datastore"
 	"github.com/txsvc/platform/v2/pkg/id"
+	"github.com/txsvc/platform/v2/pkg/loader"
 	"github.com/txsvc/platform/v2/pkg/timestamp"
 )
 
@@ -52,9 +53,19 @@ type (
 var (
 	// ErrAccountExists indicates that the account already exists and can't be created
 	ErrAccountExists = errors.New("account exists")
+
+	// loader used to cache accounts
+	accountLoader = loader.New(AccountLoaderFunc, loader.DefaultTTL)
 )
 
-// CreateAccount creates an new account within a given realm
+func (acc *Account) Equal(a *Account) bool {
+	if a == nil {
+		return false
+	}
+	return acc.Realm == a.Realm && acc.ClientID == a.ClientID && acc.UserID == a.UserID
+}
+
+// CreateAccount creates an new account in the given realm. userID has to be unique and a new clientID will be assigned.
 func CreateAccount(ctx context.Context, realm, userID string, expires int) (*Account, error) {
 	acc, err := FindAccountByUserID(ctx, realm, userID)
 	if err != nil {
@@ -66,7 +77,20 @@ func CreateAccount(ctx context.Context, realm, userID string, expires int) (*Acc
 
 	now := timestamp.Now()
 	token, _ := id.ShortUUID() // temporary token to confirm the new account. this is not an authorization token or such!
-	uid, _ := id.ShortUUID()   // FIXME verify that uid is unique
+
+	uid := ""
+	for {
+		// make sure that the new clientID is unique
+		uid, _ = id.ShortUUID()
+		acc, err := LookupAccount(ctx, realm, uid)
+		if err != nil {
+			return nil, err
+		}
+		if acc == nil {
+			break
+		}
+		// try again ...
+	}
 
 	account := Account{
 		Realm:     realm,
@@ -88,26 +112,30 @@ func CreateAccount(ctx context.Context, realm, userID string, expires int) (*Acc
 
 // LookupAccount retrieves an account within a given realm
 func LookupAccount(ctx context.Context, realm, clientID string) (*Account, error) {
-	var account Account
-	k := accountKey(realm, clientID)
 
-	err := ds.DataStore().Get(ctx, k, &account)
+	k := nativeKey(namedKey(realm, clientID))
+	account, err := accountLoader.Load(ctx, k.Encode())
 	if err != nil {
-		if err == datastore.ErrNoSuchEntity {
-			return nil, nil
-		}
 		return nil, err
 	}
-	return &account, nil
+	if account == nil {
+		return nil, nil // not found
+	}
+	return account.(*Account), nil
+
 }
 
 func UpdateAccount(ctx context.Context, account *Account) error {
-	k := accountKey(account.Realm, account.ClientID)
-	account.Updated = timestamp.Now()
+	k := nativeKey(account.Key())
 
+	// there is a SMALL time window where the cache and the datastore are inconsistent ...
+
+	account.Updated = timestamp.Now()
 	if _, err := ds.DataStore().Put(ctx, k, account); err != nil {
 		return err
 	}
+
+	accountLoader.Remove(ctx, k.Encode())
 	return nil
 }
 
@@ -161,10 +189,37 @@ func ResetTemporaryToken(ctx context.Context, acc *Account, expires int) (*Accou
 	return acc, nil
 }
 
-func accountKey(realm, client string) *datastore.Key {
-	return datastore.NameKey(datastoreAccounts, namedKey(realm, client), nil)
+//
+// keys and dataloader
+//
+
+func (acc *Account) Key() string {
+	return namedKey(acc.Realm, acc.ClientID)
+}
+
+func nativeKey(key string) *datastore.Key {
+	return datastore.NameKey(datastoreAccounts, key, nil)
 }
 
 func namedKey(part1, part2 string) string {
 	return part1 + "." + part2
+}
+
+// AccountLoaderFunc implements the LoaderFunc interface for retrieving account resources
+func AccountLoaderFunc(ctx context.Context, key string) (interface{}, error) {
+	var account Account
+
+	k, err := datastore.DecodeKey(key)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ds.DataStore().Get(ctx, k, &account)
+	if err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &account, nil
 }

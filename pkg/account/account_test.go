@@ -18,7 +18,7 @@ const (
 func cleanup() {
 	account, _ := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
 	if account != nil {
-		k := accountKey(accountTestRealm, account.ClientID)
+		k := nativeKey(namedKey(accountTestRealm, account.ClientID))
 		ds.DataStore().Delete(context.TODO(), k)
 	}
 }
@@ -41,6 +41,33 @@ func TestCreateAccount(t *testing.T) {
 	}
 }
 
+func TestDuplicateAccount(t *testing.T) {
+	account, err := CreateAccount(context.TODO(), accountTestRealm, accountTestUser, 7)
+	assert.Error(t, err)
+	assert.Nil(t, account)
+	assert.Equal(t, ErrAccountExists, err)
+}
+
+func TestAccountLoaderFunc(t *testing.T) {
+
+	account1, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
+	if assert.NoError(t, err) {
+		assert.NotNil(t, account1)
+	}
+
+	k := nativeKey(account1.Key())
+
+	account2, err := AccountLoaderFunc(context.TODO(), k.Encode())
+	if assert.NoError(t, err) {
+		assert.NotNil(t, account2)
+
+		account3 := account2.(*Account)
+		assert.NotNil(t, account3)
+
+		assert.True(t, account1.Equal(account3))
+	}
+}
+
 func TestLookupAccount(t *testing.T) {
 	account1, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
 	if assert.NoError(t, err) {
@@ -52,6 +79,24 @@ func TestLookupAccount(t *testing.T) {
 		assert.NotNil(t, account2)
 		assert.Equal(t, account1.Realm, account2.Realm)
 		assert.Equal(t, account1.UserID, account2.UserID)
+	}
+}
+
+func TestAccountLoaderHit(t *testing.T) {
+
+	account1, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
+	if assert.NoError(t, err) {
+		assert.NotNil(t, account1)
+	}
+
+	// warm the cache
+	LookupAccount(context.TODO(), accountTestRealm, account1.ClientID)
+	hits := accountLoader.Hits()
+
+	account2, err := LookupAccount(context.TODO(), accountTestRealm, account1.ClientID)
+	if assert.NoError(t, err) {
+		assert.NotNil(t, account2)
+		assert.Equal(t, hits+1, accountLoader.Hits())
 	}
 }
 
