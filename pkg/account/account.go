@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"cloud.google.com/go/datastore"
+	mcache "github.com/OrlovEvgeny/go-mcache"
 
 	ds "github.com/txsvc/platform/v2/pkg/datastore"
 	"github.com/txsvc/platform/v2/pkg/id"
@@ -56,6 +57,9 @@ var (
 
 	// loader used to cache accounts
 	accountLoader = loader.New(AccountLoaderFunc, loader.DefaultTTL)
+
+	// secondary cache, maps realm/userID to realm/clientID
+	userIDCache = mcache.New()
 )
 
 func (acc *Account) Equal(a *Account) bool {
@@ -114,15 +118,20 @@ func CreateAccount(ctx context.Context, realm, userID string, expires int) (*Acc
 func LookupAccount(ctx context.Context, realm, clientID string) (*Account, error) {
 
 	k := nativeKey(namedKey(realm, clientID))
-	account, err := accountLoader.Load(ctx, k.Encode())
+	rsrc, err := accountLoader.Load(ctx, k.Encode())
 	if err != nil {
 		return nil, err
 	}
-	if account == nil {
+	if rsrc == nil {
 		return nil, nil // not found
 	}
-	return account.(*Account), nil
 
+	account := rsrc.(*Account)
+
+	// update the secondary cache
+	userIDCache.Set(namedKey(realm, account.UserID), k.Encode(), loader.DefaultTTL)
+
+	return account, nil
 }
 
 func UpdateAccount(ctx context.Context, account *Account) error {
@@ -141,6 +150,21 @@ func UpdateAccount(ctx context.Context, account *Account) error {
 
 // FindAccountUserID retrieves an account bases on the user id
 func FindAccountByUserID(ctx context.Context, realm, userID string) (*Account, error) {
+
+	secondary := namedKey(realm, userID)
+	if k, ok := userIDCache.Get(secondary); ok {
+		// since we know the userID -> clientID mapping, we can use the loader and don't have to create a query
+		rsrc, err := accountLoader.Load(ctx, k.(string))
+		if err != nil {
+			return nil, err
+		}
+		if rsrc != nil {
+			return rsrc.(*Account), nil
+		}
+	}
+
+	// nothing found let's try a query
+
 	var accounts []*Account
 	if _, err := ds.DataStore().GetAll(ctx, datastore.NewQuery(datastoreAccounts).Filter("Realm =", realm).Filter("UserID =", userID), &accounts); err != nil {
 		return nil, err
@@ -148,7 +172,17 @@ func FindAccountByUserID(ctx context.Context, realm, userID string) (*Account, e
 	if accounts == nil {
 		return nil, nil
 	}
-	return accounts[0], nil
+
+	account := accounts[0]
+
+	// since we already loaded the account, update the accountLoader
+	key := nativeKey(account.Key())
+	accountLoader.Update(ctx, key.Encode(), account)
+
+	// update the secondary cache
+	userIDCache.Set(namedKey(account.Realm, account.UserID), key.Encode(), loader.DefaultTTL)
+
+	return account, nil
 }
 
 // FindAccountByToken retrieves an account bases on either the temporary token or the auth token
@@ -221,5 +255,9 @@ func AccountLoaderFunc(ctx context.Context, key string) (interface{}, error) {
 		}
 		return nil, err
 	}
+
+	// update the secondary cache
+	userIDCache.Set(namedKey(account.Realm, account.UserID), key, loader.DefaultTTL)
+
 	return &account, nil
 }

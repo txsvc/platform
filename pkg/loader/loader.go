@@ -69,6 +69,22 @@ func (ld *Loader) Load(ctx context.Context, key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (ld *Loader) Contains(ctx context.Context, key string) bool {
+	_, ok := ld.cache.Get(key)
+	return ok
+}
+
+// Update replaces a resource in the cache with a different one without loading it. It also resets the TTL.
+func (ld *Loader) Update(ctx context.Context, key string, value interface{}) error {
+	ld.mu.Lock()
+	defer ld.mu.Unlock()
+
+	if err := ld.cache.Set(key, value, ld.expiresAfter); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Remove removes a resource from the cache if it is there. The function does nothing otherwise.
 func (ld *Loader) Remove(ctx context.Context, key string) {
 	ld.mu.Lock()
