@@ -6,16 +6,23 @@ import (
 	"strings"
 
 	"cloud.google.com/go/datastore"
+	mcache "github.com/OrlovEvgeny/go-mcache"
 	"github.com/labstack/echo/v4"
 
 	"github.com/txsvc/platform/v2/pkg/account"
 	ds "github.com/txsvc/platform/v2/pkg/datastore"
+	"github.com/txsvc/platform/v2/pkg/loader"
 	"github.com/txsvc/platform/v2/pkg/timestamp"
 )
 
 const (
 	// DatastoreAuthorizations collection AUTHORIZATION
 	datastoreAuthorizations string = "AUTHORIZATIONS"
+)
+
+var (
+	// secondary cache, maps token to authorization
+	authCache = mcache.New()
 )
 
 func (ath *Authorization) Equal(a *Authorization) bool {
@@ -92,12 +99,17 @@ func NewAuthorization(req *AuthorizationRequest, expires int) *Authorization {
 // UpdateAuthorization updates all data needed for the auth fu
 func UpdateAuthorization(ctx context.Context, auth *Authorization) error {
 	k := nativeKey(auth.Key())
-	// FIXME add a cache ?
+
+	// remove from the cache
+	authCache.Remove(auth.Token)
 
 	// we simply overwrite the existing authorization. If this is no desired, use GetAuthorization first,
 	// update the Authorization and then write it back.
-	_, err := ds.DataStore().Put(ctx, k, auth)
-	return err
+	if _, err := ds.DataStore().Put(ctx, k, auth); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LookupAuthorization looks for an authorization
@@ -106,14 +118,13 @@ func LookupAuthorization(ctx context.Context, realm, clientID string) (*Authoriz
 
 	k := nativeKey(namedKey(realm, clientID))
 
-	// FIXME add a cache ?
-
 	if err := ds.DataStore().Get(ctx, k, &auth); err != nil {
 		if err == datastore.ErrNoSuchEntity {
 			return nil, nil // Not finding one is not an error!
 		}
 		return nil, err
 	}
+
 	return &auth, nil
 }
 
@@ -131,14 +142,22 @@ func DeleteAuthorization(ctx context.Context, realm, clientID string) (*Authoriz
 		return nil, err
 	}
 
+	// remove from the cache
+	authCache.Remove(auth.Token)
+
 	return auth, nil
 }
 
 // FindAuthorizationByToken looks for an authorization by the token
 func FindAuthorizationByToken(ctx context.Context, token string) (*Authorization, error) {
-	var auth []*Authorization
+	if token == "" {
+		return nil, ErrNoSuchEntity
+	}
+	if a, ok := authCache.Get(token); ok {
+		return a.(*Authorization), nil
+	}
 
-	// FIXME add a cache ?
+	var auth []*Authorization
 
 	if _, err := ds.DataStore().GetAll(ctx, datastore.NewQuery(datastoreAuthorizations).Filter("Token =", token), &auth); err != nil {
 		return nil, err
@@ -146,7 +165,13 @@ func FindAuthorizationByToken(ctx context.Context, token string) (*Authorization
 	if auth == nil {
 		return nil, nil
 	}
-	return auth[0], nil
+
+	a := auth[0]
+
+	// add the authorization to the cache
+	authCache.Set(a.Token, a, loader.DefaultTTL)
+
+	return a, nil
 }
 
 // ExchangeToken confirms the temporary auth token and creates the permanent one
