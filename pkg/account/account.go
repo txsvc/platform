@@ -148,6 +148,23 @@ func UpdateAccount(ctx context.Context, account *Account) error {
 	return nil
 }
 
+func DeleteAccount(ctx context.Context, realm, clientID string) (*Account, error) {
+
+	account, err := LookupAccount(ctx, realm, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	k := nativeKey(namedKey(realm, clientID))
+	ds.DataStore().Delete(ctx, k)
+
+	// remove from the caches
+	accountLoader.Remove(ctx, k.Encode())
+	userIDCache.Remove(namedKey(realm, account.UserID))
+
+	return account, nil
+}
+
 // FindAccountUserID retrieves an account bases on the user id
 func FindAccountByUserID(ctx context.Context, realm, userID string) (*Account, error) {
 
@@ -201,7 +218,7 @@ func FindAccountByToken(ctx context.Context, token string) (*Account, error) {
 func ResetAccountChallenge(ctx context.Context, acc *Account, expires int) (*Account, error) {
 	token, _ := id.ShortUUID()
 	acc.Expires = timestamp.IncT(timestamp.Now(), expires)
-	acc.Token = "ac." + token
+	acc.Token = token
 	acc.Status = AccountUnconfirmed
 
 	if err := UpdateAccount(ctx, acc); err != nil {
@@ -214,7 +231,7 @@ func ResetAccountChallenge(ctx context.Context, acc *Account, expires int) (*Acc
 func ResetTemporaryToken(ctx context.Context, acc *Account, expires int) (*Account, error) {
 	token, _ := id.ShortUUID()
 	acc.Expires = timestamp.IncT(timestamp.Now(), expires)
-	acc.Token = "tt." + token
+	acc.Token = token
 	acc.Status = AccountLoggedOut
 
 	if err := UpdateAccount(ctx, acc); err != nil {

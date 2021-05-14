@@ -53,12 +53,14 @@ func TestLoginScenario2(t *testing.T) {
 
 	loginStep1(t, http.StatusCreated) // new account, request login, create the account
 	account1 := getAccount(t)
+	token1 := account1.Token
 
 	loginStep1(t, http.StatusCreated) // existing account, request login again, create the account
 	account2 := getAccount(t)
+	token2 := account2.Token
 
 	// requires a new token
-	assert.NotEqual(t, account1.Token, account2.Token)
+	assert.NotEqual(t, token1, token2)
 
 	loginStep2(t, account2.Token, http.StatusTemporaryRedirect, true) // confirm the new account, send auth token
 
@@ -222,8 +224,7 @@ func createAuthRequestJSON(real, user, client, token string) string {
 func cleaner() {
 	acc, err := account.FindAccountByUserID(context.TODO(), realm, userID)
 	if err == nil && acc != nil {
-		a := authorizationKey(acc.Realm, acc.ClientID)
-		ds.DataStore().Delete(context.TODO(), a)
+		account.DeleteAccount(context.TODO(), acc.Realm, acc.ClientID)
 
 		k := accountKey(realm, acc.ClientID)
 		ds.DataStore().Delete(context.TODO(), k)
