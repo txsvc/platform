@@ -64,7 +64,7 @@ func CheckAuthorization(ctx context.Context, c echo.Context, scope string) (*Aut
 	return auth, nil
 }
 
-func CreateAuthorization(account *account.Account, req *AuthorizationRequest, expires int) *Authorization {
+func NewAuthorization(account *account.Account, req *AuthorizationRequest, expires int) *Authorization {
 	now := timestamp.Now()
 
 	a := Authorization{
@@ -149,7 +149,7 @@ func ExchangeToken(ctx context.Context, req *AuthorizationRequest, expires int, 
 		if req.Scope == "" {
 			return nil, http.StatusBadRequest, ErrNoScope
 		}
-		auth = CreateAuthorization(acc, req, expires)
+		auth = NewAuthorization(acc, req, expires)
 	}
 	auth.Token = CreateSimpleToken()
 	auth.Revoked = false
