@@ -25,6 +25,11 @@ func TestGetIntDefault(t *testing.T) {
 	assert.Equal(t, int64(42), e)
 }
 
+func TestGetIntNotInt(t *testing.T) {
+	e := GetInt("PATH", 66)
+	assert.Equal(t, int64(66), e)
+}
+
 func TestAssert(t *testing.T) {
 	assert.True(t, Assert("PATH"))
 	assert.False(t, Assert("FOO_BAR"))

@@ -3,4 +3,4 @@ all: test
 
 .PHONY: test
 test:
-	go test `go list ./... | grep -v 'tests\|google'` -coverprofile=coverage.txt -covermode=atomic
+	go test `go list ./... | grep -v 'tests\|google\|httpserver'` -coverprofile=coverage.txt -covermode=atomic

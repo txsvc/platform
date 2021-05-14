@@ -18,20 +18,27 @@ const (
 	datastoreAuthorizations string = "AUTHORIZATIONS"
 )
 
-// IsValid verifies that the Authorization is still valid, i.e. is not expired and not revoked.
-func (a *Authorization) IsValid() bool {
-	if a.Revoked {
+func (ath *Authorization) Equal(a *Authorization) bool {
+	if a == nil {
 		return false
 	}
-	if a.Expires < timestamp.Now() {
+	return ath.Token == a.Token && ath.Realm == a.Realm && ath.ClientID == a.ClientID && ath.UserID == a.UserID
+}
+
+// IsValid verifies that the Authorization is still valid, i.e. is not expired and not revoked.
+func (ath *Authorization) IsValid() bool {
+	if ath.Revoked {
+		return false
+	}
+	if ath.Expires < timestamp.Now() {
 		return false
 	}
 	return true
 }
 
 // HasAdminScope checks if the authorization includes scope 'api:admin'
-func (a *Authorization) HasAdminScope() bool {
-	return strings.Contains(a.Scope, ScopeAPIAdmin)
+func (ath *Authorization) HasAdminScope() bool {
+	return strings.Contains(ath.Scope, ScopeAPIAdmin)
 }
 
 // CheckAuthorization relies on the presence of a bearer token and validates the
@@ -64,11 +71,11 @@ func CheckAuthorization(ctx context.Context, c echo.Context, scope string) (*Aut
 	return auth, nil
 }
 
-func NewAuthorization(account *account.Account, req *AuthorizationRequest, expires int) *Authorization {
+func NewAuthorization(req *AuthorizationRequest, expires int) *Authorization {
 	now := timestamp.Now()
 
 	a := Authorization{
-		ClientID:  account.ClientID,
+		ClientID:  req.ClientID,
 		Realm:     req.Realm,
 		Token:     CreateSimpleToken(),
 		TokenType: DefaultTokenType,
@@ -116,7 +123,7 @@ func DeleteAuthorization(ctx context.Context, realm, clientID string) (*Authoriz
 		return nil, err
 	}
 	if auth == nil {
-		return nil, ErrNoAuthorization
+		return nil, ErrNoSuchEntity
 	}
 
 	k := nativeKey(namedKey(realm, clientID))
@@ -167,7 +174,8 @@ func ExchangeToken(ctx context.Context, req *AuthorizationRequest, expires int, 
 		if req.Scope == "" {
 			return nil, http.StatusBadRequest, ErrNoScope
 		}
-		auth = NewAuthorization(acc, req, expires)
+		req.ClientID = acc.ClientID
+		auth = NewAuthorization(req, expires)
 	}
 	auth.Token = CreateSimpleToken()
 	auth.Revoked = false

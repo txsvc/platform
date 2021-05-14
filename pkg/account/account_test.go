@@ -79,6 +79,7 @@ func TestUpdateAccount(t *testing.T) {
 }
 
 func TestDeleteAccount(t *testing.T) {
+	t.Cleanup(cleanup)
 
 	account, err := FindAccountByUserID(context.TODO(), accountTestRealm, accountTestUser)
 	if assert.NoError(t, err) {
@@ -100,8 +101,4 @@ func TestDeleteAccount(t *testing.T) {
 			assert.Equal(t, ErrNoSuchAccount, err)
 		}
 	}
-}
-
-func TestCleanup(t *testing.T) {
-	cleanup()
 }

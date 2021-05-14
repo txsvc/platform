@@ -8,19 +8,29 @@ import (
 )
 
 func TestChecksum(t *testing.T) {
-	checksum := Checksum("check me")
-	result := "10f335e9"
+	cs1 := Checksum("check me")
+	result1 := "10f335e9"
+	result2 := "00000000"
 
-	assert.NotEmpty(t, checksum)
-	assert.Equal(t, result, checksum)
+	assert.NotEmpty(t, cs1)
+	assert.Equal(t, result1, cs1)
+
+	cs2 := Checksum("")
+	assert.NotEmpty(t, cs2)
+	assert.Equal(t, result2, cs2)
 }
 
 func TestFingerprint(t *testing.T) {
-	checksum := Fingerprint("check me")
-	result := "6e7227eb9fb0793b0e150facda30c40b"
+	cs1 := Fingerprint("check me")
+	result1 := "6e7227eb9fb0793b0e150facda30c40b"
+	result2 := "d41d8cd98f00b204e9800998ecf8427e"
 
-	assert.NotEmpty(t, checksum)
-	assert.Equal(t, result, checksum)
+	assert.NotEmpty(t, cs1)
+	assert.Equal(t, result1, cs1)
+
+	cs2 := Fingerprint("")
+	assert.NotEmpty(t, cs2)
+	assert.Equal(t, result2, cs2)
 }
 
 func TestUUID(t *testing.T) {

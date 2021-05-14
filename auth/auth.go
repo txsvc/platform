@@ -83,8 +83,8 @@ var (
 	ErrNotAuthorized     = errors.New("not authorized")
 	ErrAlreadyAuthorized = errors.New("already authorized")
 
-	// ErrNoAuthorization indicates that the authorization does not exist
-	ErrNoAuthorization = errors.New("no such authorization")
+	// ErrNoSuchEntity indicates that the authorization does not exist
+	ErrNoSuchEntity = errors.New("entity does not exist")
 
 	// ErrNoToken indicates that no bearer token was provided
 	ErrNoToken = errors.New("no token provided")

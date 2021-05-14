@@ -2,7 +2,7 @@ package platform
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 
 	"cloud.google.com/go/datastore"
@@ -19,20 +19,20 @@ type (
 	}
 )
 
-var client *Client
+var (
+	client *Client
+
+	ErrInvalidConf = errors.New("invalid configuration")
+	ErrNoDatastore = errors.New("datastore is not initialized")
+	ErrNoStorage   = errors.New("cloud storage is not initialized")
+)
 
 func init() {
 	if client != nil {
 		return // singleton
 	}
 
-	// FIXME,DEPRECATED remove this in the future
-	projectID := env.GetString("PROJECT_ID", "")
-	if projectID == "" {
-		return // FIXME should this be a hard exception?
-	}
-
-	cl, err := NewClient(context.Background(), projectID, env.GetString("SERVICE_NAME", "default"))
+	cl, err := NewClient(context.Background(), env.GetString("PROJECT_ID", ""), env.GetString("SERVICE_NAME", "default"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -44,6 +44,13 @@ func init() {
 // NewClient creates a new client
 func NewClient(ctx context.Context, projectID, serviceName string) (*Client, error) {
 	c := Client{}
+
+	if projectID == "" {
+		return nil, ErrInvalidConf
+	}
+	if serviceName == "" {
+		serviceName = "default"
+	}
 
 	// initialize Cloud Datastore
 	ds, err := datastore.NewClient(ctx, projectID)
@@ -70,10 +77,12 @@ func (c *Client) Close() {
 	if c.DatastoreClient != nil {
 		c.DatastoreClient.Close()
 	}
+	c.StorageClient = nil
+	c.DatastoreClient = nil
 }
 
 //
-// FIXME,DEPRECATED remove these helpers in the future
+// DEPRECATED remove these helpers in the future
 //
 
 // Close the platform related clients
@@ -85,18 +94,18 @@ func Close() {
 
 // DataStore returns a reference to the datastore client
 func DataStore() *datastore.Client {
-	if client != nil {
+	if client.DatastoreClient != nil {
 		return client.DatastoreClient
 	}
-	log.Fatal(fmt.Errorf("Google Datastore is not initialized"))
+	log.Fatal(ErrNoDatastore)
 	return nil
 }
 
 // Storage returns a reference to the storage client
 func Storage() *storage.Client {
-	if client != nil {
+	if client.StorageClient != nil {
 		return client.StorageClient
 	}
-	log.Fatal(fmt.Errorf("Google Cloud Storage is not initialized"))
+	log.Fatal(ErrNoStorage)
 	return nil
 }
