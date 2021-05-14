@@ -2,12 +2,42 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/txsvc/platform/v2/pkg/account"
 	"github.com/txsvc/platform/v2/pkg/timestamp"
 )
+
+// ConfirmLoginChallenge confirms the account
+func ConfirmLoginChallenge(ctx context.Context, token string) (*account.Account, int, error) {
+	if token == "" {
+		return nil, http.StatusUnauthorized, ErrNoToken
+	}
+
+	acc, err := account.FindAccountByToken(ctx, token)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	if acc == nil {
+		return nil, http.StatusUnauthorized, nil
+	}
+	now := timestamp.Now()
+	if acc.Expires < now {
+		return acc, http.StatusForbidden, nil
+	}
+
+	acc.Confirmed = now
+	acc.Expires = 0
+	acc.Status = account.AccountLoggedOut
+	acc.Token = ""
+
+	err = account.UpdateAccount(ctx, acc)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return acc, http.StatusNoContent, nil
+}
 
 func LogoutAccount(ctx context.Context, realm, clientID string) (int, error) {
 	// find the account
@@ -16,7 +46,7 @@ func LogoutAccount(ctx context.Context, realm, clientID string) (int, error) {
 		return http.StatusInternalServerError, err
 	}
 	if acc == nil {
-		return http.StatusBadRequest, fmt.Errorf(MsgAuthenticationNotFound, fmt.Sprintf("%s.%s", realm, clientID))
+		return http.StatusBadRequest, ErrNoSuchEntity
 	}
 
 	if acc.Status < 0 {
@@ -51,7 +81,7 @@ func BlockAccount(ctx context.Context, realm, clientID string) error {
 		return err
 	}
 	if acc == nil {
-		return fmt.Errorf(MsgAuthenticationNotFound, fmt.Sprintf("%s.%s", realm, clientID))
+		return ErrNoSuchEntity
 	}
 
 	auth, err := LookupAuthorization(ctx, acc.Realm, acc.ClientID)
@@ -68,34 +98,4 @@ func BlockAccount(ctx context.Context, realm, clientID string) error {
 
 	acc.Status = account.AccountBlocked
 	return account.UpdateAccount(ctx, acc)
-}
-
-// ConfirmLoginChallenge confirms the account
-func ConfirmLoginChallenge(ctx context.Context, token string) (*account.Account, int, error) {
-	if token == "" {
-		return nil, http.StatusUnauthorized, ErrNoToken
-	}
-
-	acc, err := account.FindAccountByToken(ctx, token)
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-	if acc == nil {
-		return nil, http.StatusUnauthorized, nil
-	}
-	now := timestamp.Now()
-	if acc.Expires < now {
-		return acc, http.StatusForbidden, nil
-	}
-
-	acc.Confirmed = now
-	acc.Status = account.AccountLoggedOut
-	acc.Token = ""
-
-	err = account.UpdateAccount(ctx, acc)
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-
-	return acc, http.StatusNoContent, nil
 }

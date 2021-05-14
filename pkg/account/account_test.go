@@ -40,8 +40,18 @@ func TestCreateAccount(t *testing.T) {
 	account, err := CreateAccount(context.TODO(), accountTestRealm, accountTestUser, 7)
 	if assert.NoError(t, err) {
 		assert.NotNil(t, account)
+
+		assert.Equal(t, accountTestRealm, account.Realm)
+		assert.Equal(t, accountTestUser, account.UserID)
+		assert.NotEmpty(t, account.ClientID)
+		assert.Greater(t, account.Created, int64(0))
+		assert.Greater(t, account.Updated, int64(0))
+		assert.Greater(t, account.Expires, int64(0))
+
 		assert.Equal(t, int64(0), account.Confirmed)
 		assert.Equal(t, AccountUnconfirmed, account.Status)
+		assert.NotEmpty(t, account.Token)
+		assert.Greater(t, account.Expires, account.Created)
 	}
 }
 

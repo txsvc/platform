@@ -97,7 +97,7 @@ func TestUpdateAccountCacheInvalidation(t *testing.T) {
 	}
 }
 
-func TestFindByUserID1(t *testing.T) {
+func TestFindByUserID(t *testing.T) {
 	cleanup()
 	ctx := context.TODO()
 
