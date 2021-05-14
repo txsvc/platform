@@ -64,7 +64,7 @@ func CheckAuthorization(ctx context.Context, c echo.Context, scope string) (*Aut
 	return auth, nil
 }
 
-func NewAuthorization(account *account.Account, req *AuthorizationRequest, expires int) *Authorization {
+func CreateAuthorization(account *account.Account, req *AuthorizationRequest, expires int) *Authorization {
 	now := timestamp.Now()
 
 	a := Authorization{
@@ -80,18 +80,6 @@ func NewAuthorization(account *account.Account, req *AuthorizationRequest, expir
 		Updated:   now,
 	}
 	return &a
-}
-
-// CreateAuthorization creates all data needed for the auth fu
-func CreateAuthorization(ctx context.Context, auth *Authorization) error {
-	k := authorizationKey(auth.Realm, auth.ClientID)
-
-	// FIXME add a cache ?
-
-	// we simply overwrite the existing authorization. If this is no desired, use GetAuthorization first,
-	// update the Authorization and then write it back.
-	_, err := ds.DataStore().Put(ctx, k, auth)
-	return err
 }
 
 // UpdateAuthorization updates all data needed for the auth fu
@@ -161,14 +149,14 @@ func ExchangeToken(ctx context.Context, req *AuthorizationRequest, expires int, 
 		if req.Scope == "" {
 			return nil, http.StatusBadRequest, ErrNoScope
 		}
-		auth = NewAuthorization(acc, req, expires)
+		auth = CreateAuthorization(acc, req, expires)
 	}
 	auth.Token = CreateSimpleToken()
 	auth.Revoked = false
 	auth.Expires = now + (int64(expires) * 86400)
 	auth.Updated = now
 
-	err = CreateAuthorization(ctx, auth)
+	err = UpdateAuthorization(ctx, auth)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
