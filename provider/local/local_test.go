@@ -87,7 +87,7 @@ func TestDefaultTasks(t *testing.T) {
 func TestDefaultAuthorizationProvider(t *testing.T) {
 	InitLocalProviders()
 
-	ap := platform.AuthorizationProvider()
+	ap := platform.AuthenticationProvider()
 
 	assert.NotNil(t, ap)
 

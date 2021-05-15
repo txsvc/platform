@@ -42,12 +42,12 @@ func LoginRequestEndpoint(c echo.Context) error {
 	// new account
 	if acc == nil {
 		// #1: create a new account
-		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, platform.AuthorizationProvider().Options().AuthenticationExpiration)
+		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, platform.AuthenticationProvider().Options().AuthenticationExpiration)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the confirmation link
-		err = platform.AuthorizationProvider().AccountChallengeNotification(ctx, acc)
+		err = platform.AuthenticationProvider().AccountChallengeNotification(ctx, acc)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -58,12 +58,12 @@ func LoginRequestEndpoint(c echo.Context) error {
 	// existing account but check some stuff first ...
 	if acc.Confirmed == 0 {
 		// #1: update the expiration timestamp
-		acc, err = account.ResetAccountChallenge(ctx, acc, platform.AuthorizationProvider().Options().AuthenticationExpiration)
+		acc, err = account.ResetAccountChallenge(ctx, acc, platform.AuthenticationProvider().Options().AuthenticationExpiration)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
 		// #2: send the account confirmation link
-		err = platform.AuthorizationProvider().AccountChallengeNotification(ctx, acc)
+		err = platform.AuthenticationProvider().AccountChallengeNotification(ctx, acc)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -76,11 +76,11 @@ func LoginRequestEndpoint(c echo.Context) error {
 	}
 
 	// create and send the auth token
-	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().Options().AuthenticationExpiration)
+	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthenticationProvider().Options().AuthenticationExpiration)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
-	err = platform.AuthorizationProvider().ProvideAuthorizationToken(ctx, acc)
+	err = platform.AuthenticationProvider().ProvideAuthorizationToken(ctx, acc)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -146,18 +146,18 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 		return ErrorResponse(c, status, err)
 	}
 
-	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().Options().AuthenticationExpiration)
+	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthenticationProvider().Options().AuthenticationExpiration)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	err = platform.AuthorizationProvider().ProvideAuthorizationToken(ctx, acc)
+	err = platform.AuthenticationProvider().ProvideAuthorizationToken(ctx, acc)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	// status 307: account is confirmed, email with auth token sent, redirect now
-	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", platform.AuthorizationProvider().Options().Endpoint))
+	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", platform.AuthenticationProvider().Options().Endpoint))
 }
 
 // GetAuthorizationEndpoint exchanges a temporary confirmation token for a 'real' token.
@@ -180,9 +180,9 @@ func GetAuthorizationEndpoint(c echo.Context) error {
 	}
 
 	// make sure we have a known default scope and no one sneaks something in
-	req.Scope = platform.AuthorizationProvider().Options().Scope
+	req.Scope = platform.AuthenticationProvider().Options().Scope
 
-	ath, status, err := authentication.ExchangeToken(ctx, req, platform.AuthorizationProvider().Options().AuthorizationExpiration, c.Request().RemoteAddr)
+	ath, status, err := authentication.ExchangeToken(ctx, req, platform.AuthenticationProvider().Options().AuthorizationExpiration, c.Request().RemoteAddr)
 	if status != http.StatusOK {
 		return ErrorResponse(c, status, err)
 	}

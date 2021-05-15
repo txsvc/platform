@@ -30,7 +30,7 @@ var (
 	_ logging.LoggingProvider               = (*defaultProviderImpl)(nil)
 	_ metrics.MetricsProvider               = (*defaultProviderImpl)(nil)
 	_ tasks.HttpTaskProvider                = (*defaultProviderImpl)(nil)
-	_ authentication.AuthorizationProvider  = (*defaultProviderImpl)(nil)
+	_ authentication.AuthenticationProvider = (*defaultProviderImpl)(nil)
 )
 
 // a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
@@ -74,7 +74,7 @@ func (np *defaultProviderImpl) CreateHttpTask(ctx context.Context, task tasks.Ht
 	return fmt.Errorf("not implemented")
 }
 
-// IF auth.AuthorizationProvider
+// IF auth.AuthenticationProvider
 
 // AccountChallengeNotification sends a notification to the user promting to confirm the account
 func (np *defaultProviderImpl) AccountChallengeNotification(ctx context.Context, account *account.Account) error {

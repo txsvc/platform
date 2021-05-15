@@ -43,11 +43,11 @@ var (
 	errorReportingClient *LocalErrorReportingProviderImpl
 
 	// Interface guards
-	_ platform.GenericProvider             = (*LocalProviderImpl)(nil)
-	_ http.HttpRequestContextProvider      = (*LocalProviderImpl)(nil)
-	_ metrics.MetricsProvider              = (*LocalProviderImpl)(nil)
-	_ tasks.HttpTaskProvider               = (*LocalProviderImpl)(nil)
-	_ authentication.AuthorizationProvider = (*LocalProviderImpl)(nil)
+	_ platform.GenericProvider              = (*LocalProviderImpl)(nil)
+	_ http.HttpRequestContextProvider       = (*LocalProviderImpl)(nil)
+	_ metrics.MetricsProvider               = (*LocalProviderImpl)(nil)
+	_ tasks.HttpTaskProvider                = (*LocalProviderImpl)(nil)
+	_ authentication.AuthenticationProvider = (*LocalProviderImpl)(nil)
 
 	_ platform.GenericProvider              = (*LocalErrorReportingProviderImpl)(nil)
 	_ errorreporting.ErrorReportingProvider = (*LocalErrorReportingProviderImpl)(nil)

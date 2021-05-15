@@ -43,7 +43,7 @@ type (
 		httpContextProvider    http.HttpRequestContextProvider
 		backgroundTaskProvider tasks.HttpTaskProvider
 		metricsProvdider       metrics.MetricsProvider
-		authProvider           authentication.AuthorizationProvider
+		authProvider           authentication.AuthenticationProvider
 
 		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
@@ -142,7 +142,7 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 		case ProviderTypeMetrics:
 			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
 		case ProviderTypeAuthentication:
-			p.authProvider = opt.Impl(opt.ID).(authentication.AuthorizationProvider)
+			p.authProvider = opt.Impl(opt.ID).(authentication.AuthenticationProvider)
 		}
 	}
 	return nil
@@ -215,6 +215,6 @@ func NewTask(task tasks.HttpTask) error {
 	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
 }
 
-func AuthorizationProvider() authentication.AuthorizationProvider {
+func AuthenticationProvider() authentication.AuthenticationProvider {
 	return platform.authProvider
 }

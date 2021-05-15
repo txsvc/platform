@@ -11,15 +11,19 @@ import (
 )
 
 const (
-	// AuthTypeSimpleToken constant token
-	AuthTypeSimpleToken = "token"
+	// AuthTypeBearerToken constant token
+	AuthTypeBearerToken = "token"
 	// AuthTypeJWT constant jwt
 	AuthTypeJWT = "jwt"
 	// AuthTypeSlack constant slack
 	AuthTypeSlack = "slack"
 
 	// other defaults
-	DefaultTokenType = "user" // other possibilities: app, bot, ...
+	UserTokenType    = "user"
+	AppTokenType     = "app"
+	APITokenType     = "api"
+	BotTokenType     = "bot"
+	DefaultTokenType = UserTokenType
 
 	// default scopes
 	DefaultScope  = "api:read,api:write"
@@ -43,8 +47,8 @@ type (
 		ClientID  string `json:"client_id" binding:"required"` // UNIQUE
 		Realm     string `json:"realm"`
 		Token     string `json:"token" binding:"required"`
-		TokenType string `json:"token_type" binding:"required"` // user,app,bot
-		UserID    string `json:"user_id"`                       // depends on TokenType. UserID could equal ClientID or BotUSerID in Slack
+		TokenType string `json:"token_type" binding:"required"` // e.g. user,app,api,bot
+		UserID    string `json:"user_id"`                       // depends on TokenType. UserID could equal ClientID or BotUserID in Slack
 		Scope     string `json:"scope"`                         // a comma separated list of scopes, see below
 		Expires   int64  `json:"expires"`                       // 0 = never
 		// internal
@@ -62,7 +66,7 @@ type (
 		Scope    string `json:"scope"`
 	}
 
-	AuthorizationProvider interface {
+	AuthenticationProvider interface {
 		// Send an account challenge to confirm the account
 		AccountChallengeNotification(context.Context, *account.Account) error
 		// Send the new token

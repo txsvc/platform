@@ -123,11 +123,11 @@ func TestRegisterProvider(t *testing.T) {
 
 }
 
-func TestInitAuthorizationProvider(t *testing.T) {
+func TestInitAuthenticationProvider(t *testing.T) {
 	reset()
 
 	p := DefaultPlatform()
 
 	assert.NotNil(t, p.authProvider)
-	assert.NotNil(t, AuthorizationProvider())
+	assert.NotNil(t, AuthenticationProvider())
 }
