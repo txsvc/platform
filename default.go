@@ -5,7 +5,7 @@ import (
 	"fmt"
 	h "net/http"
 
-	"github.com/txsvc/platform/v2/auth"
+	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
@@ -30,7 +30,7 @@ var (
 	_ logging.LoggingProvider               = (*defaultProviderImpl)(nil)
 	_ metrics.MetricsProvider               = (*defaultProviderImpl)(nil)
 	_ tasks.HttpTaskProvider                = (*defaultProviderImpl)(nil)
-	_ auth.AuthorizationProvider            = (*defaultProviderImpl)(nil)
+	_ authentication.AuthorizationProvider  = (*defaultProviderImpl)(nil)
 )
 
 // a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
@@ -86,11 +86,11 @@ func (np *defaultProviderImpl) ProvideAuthorizationToken(ctx context.Context, ac
 	return nil
 }
 
-func (np *defaultProviderImpl) Options() *auth.AuthenticationProviderOpts {
-	return &auth.AuthenticationProviderOpts{
-		Scope:                    auth.DefaultScope,
-		Endpoint:                 auth.DefaultEndpoint,
-		AuthenticationExpiration: auth.DefaultAuthenticationExpiration,
-		AuthorizationExpiration:  auth.DefaultAuthorizationExpiration,
+func (np *defaultProviderImpl) Options() *authentication.AuthenticationProviderOpts {
+	return &authentication.AuthenticationProviderOpts{
+		Scope:                    authentication.DefaultScope,
+		Endpoint:                 authentication.DefaultEndpoint,
+		AuthenticationExpiration: authentication.DefaultAuthenticationExpiration,
+		AuthorizationExpiration:  authentication.DefaultAuthorizationExpiration,
 	}
 }

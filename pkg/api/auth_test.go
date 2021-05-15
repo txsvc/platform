@@ -13,7 +13,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/txsvc/platform/v2/auth"
+	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/pkg/account"
 	ds "github.com/txsvc/platform/v2/pkg/datastore"
 )
@@ -43,7 +43,7 @@ func TestLoginScenario1(t *testing.T) {
 
 	verifyAccountAndAuth(t)
 
-	auth, _ := auth.LookupAuthorization(context.TODO(), acc.Realm, acc.ClientID)
+	auth, _ := authentication.LookupAuthorization(context.TODO(), acc.Realm, acc.ClientID)
 	logoutStep(t, realm, userID, acc.ClientID, auth.Token, http.StatusNoContent, true)
 }
 
@@ -245,7 +245,7 @@ func getAccount(t *testing.T) *account.Account {
 func verifyAccountAndAuth(t *testing.T) {
 	acc, err := account.FindAccountByUserID(context.TODO(), realm, userID)
 	if err == nil && acc != nil {
-		auth, err := auth.LookupAuthorization(context.TODO(), acc.Realm, acc.ClientID)
+		auth, err := authentication.LookupAuthorization(context.TODO(), acc.Realm, acc.ClientID)
 		if err == nil && auth != nil {
 			assert.Equal(t, acc.ClientID, auth.ClientID)
 		}

@@ -3,7 +3,7 @@ all: test
 
 .PHONY: test
 test:
-	cd auth && go test
+	cd authentication && go test
 	cd pkg/account && go test
 	cd pkg/api && go test
 	cd pkg/datastore && go test

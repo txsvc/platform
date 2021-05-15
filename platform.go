@@ -6,8 +6,7 @@ import (
 	"log"
 	h "net/http"
 
-	//"github.com/txsvc/platform/v2/auth"
-	"github.com/txsvc/platform/v2/auth"
+	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
@@ -44,7 +43,7 @@ type (
 		httpContextProvider    http.HttpRequestContextProvider
 		backgroundTaskProvider tasks.HttpTaskProvider
 		metricsProvdider       metrics.MetricsProvider
-		authProvider           auth.AuthorizationProvider
+		authProvider           authentication.AuthorizationProvider
 
 		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
@@ -143,7 +142,7 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 		case ProviderTypeMetrics:
 			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
 		case ProviderTypeAuthentication:
-			p.authProvider = opt.Impl(opt.ID).(auth.AuthorizationProvider)
+			p.authProvider = opt.Impl(opt.ID).(authentication.AuthorizationProvider)
 		}
 	}
 	return nil
@@ -216,6 +215,6 @@ func NewTask(task tasks.HttpTask) error {
 	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
 }
 
-func AuthorizationProvider() auth.AuthorizationProvider {
+func AuthorizationProvider() authentication.AuthorizationProvider {
 	return platform.authProvider
 }

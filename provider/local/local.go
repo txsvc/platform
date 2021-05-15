@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/txsvc/platform/v2"
-	"github.com/txsvc/platform/v2/auth"
+	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
@@ -43,11 +43,11 @@ var (
 	errorReportingClient *LocalErrorReportingProviderImpl
 
 	// Interface guards
-	_ platform.GenericProvider        = (*LocalProviderImpl)(nil)
-	_ http.HttpRequestContextProvider = (*LocalProviderImpl)(nil)
-	_ metrics.MetricsProvider         = (*LocalProviderImpl)(nil)
-	_ tasks.HttpTaskProvider          = (*LocalProviderImpl)(nil)
-	_ auth.AuthorizationProvider      = (*LocalProviderImpl)(nil)
+	_ platform.GenericProvider             = (*LocalProviderImpl)(nil)
+	_ http.HttpRequestContextProvider      = (*LocalProviderImpl)(nil)
+	_ metrics.MetricsProvider              = (*LocalProviderImpl)(nil)
+	_ tasks.HttpTaskProvider               = (*LocalProviderImpl)(nil)
+	_ authentication.AuthorizationProvider = (*LocalProviderImpl)(nil)
 
 	_ platform.GenericProvider              = (*LocalErrorReportingProviderImpl)(nil)
 	_ errorreporting.ErrorReportingProvider = (*LocalErrorReportingProviderImpl)(nil)
@@ -175,11 +175,11 @@ func (a *LocalProviderImpl) ProvideAuthorizationToken(ctx context.Context, accou
 	return nil
 }
 
-func (a *LocalProviderImpl) Options() *auth.AuthenticationProviderOpts {
-	return &auth.AuthenticationProviderOpts{
-		Scope:                    auth.DefaultScope,
-		Endpoint:                 auth.DefaultEndpoint,
-		AuthenticationExpiration: auth.DefaultAuthenticationExpiration,
-		AuthorizationExpiration:  auth.DefaultAuthorizationExpiration,
+func (a *LocalProviderImpl) Options() *authentication.AuthenticationProviderOpts {
+	return &authentication.AuthenticationProviderOpts{
+		Scope:                    authentication.DefaultScope,
+		Endpoint:                 authentication.DefaultEndpoint,
+		AuthenticationExpiration: authentication.DefaultAuthenticationExpiration,
+		AuthorizationExpiration:  authentication.DefaultAuthorizationExpiration,
 	}
 }

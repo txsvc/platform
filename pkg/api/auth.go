@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/txsvc/platform/v2"
 
-	"github.com/txsvc/platform/v2/auth"
+	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/pkg/account"
 )
 
@@ -23,7 +23,7 @@ import (
 // status 400: invalid request data
 // status 403: only logged-out and confirmed users can proceed
 func LoginRequestEndpoint(c echo.Context) error {
-	var req *auth.AuthorizationRequest = new(auth.AuthorizationRequest)
+	var req *authentication.AuthorizationRequest = new(authentication.AuthorizationRequest) // FIXME change this
 	ctx := platform.NewHttpContext(c.Request())
 
 	err := c.Bind(req)
@@ -72,7 +72,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	}
 	if acc.Status != 0 {
 		// status 403: only logged-out and confirmed users can proceed, do nothing otherwise
-		return ErrorResponse(c, http.StatusForbidden, auth.ErrAlreadyAuthorized)
+		return ErrorResponse(c, http.StatusForbidden, authentication.ErrAlreadyAuthorized)
 	}
 
 	// create and send the auth token
@@ -94,7 +94,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 // POST /logout
 
 func LogoutRequestEndpoint(c echo.Context) error {
-	var req *auth.AuthorizationRequest = new(auth.AuthorizationRequest)
+	var req *authentication.AuthorizationRequest = new(authentication.AuthorizationRequest) // FIXME change this
 	ctx := platform.NewHttpContext(c.Request())
 
 	err := c.Bind(req)
@@ -105,11 +105,11 @@ func LogoutRequestEndpoint(c echo.Context) error {
 		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
 
-	token, err := auth.GetBearerToken(c.Request())
+	token, err := authentication.GetBearerToken(c.Request())
 	if err != nil {
-		return auth.ErrNoToken
+		return authentication.ErrNoToken
 	}
-	ath, err := auth.FindAuthorizationByToken(ctx, token)
+	ath, err := authentication.FindAuthorizationByToken(ctx, token)
 	if err != nil {
 		return ErrorResponse(c, http.StatusBadRequest, err)
 	}
@@ -118,7 +118,7 @@ func LogoutRequestEndpoint(c echo.Context) error {
 	}
 
 	// logout starts here
-	status, err := auth.LogoutAccount(ctx, ath.Realm, ath.ClientID)
+	status, err := authentication.LogoutAccount(ctx, ath.Realm, ath.ClientID)
 	if err != nil {
 		return ErrorResponse(c, status, err)
 	}
@@ -138,10 +138,10 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 
 	token := c.Param("token")
 	if token == "" {
-		return ErrorResponse(c, http.StatusBadRequest, auth.ErrInvalidRoute)
+		return ErrorResponse(c, http.StatusBadRequest, authentication.ErrInvalidRoute)
 	}
 
-	acc, status, err := auth.ConfirmLoginChallenge(ctx, token)
+	acc, status, err := authentication.ConfirmLoginChallenge(ctx, token)
 	if status != http.StatusNoContent {
 		return ErrorResponse(c, status, err)
 	}
@@ -167,7 +167,7 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 // status 401: token is expired or has already been used, token and user_id do not match
 // status 404: token was not found
 func GetAuthorizationEndpoint(c echo.Context) error {
-	var req *auth.AuthorizationRequest = new(auth.AuthorizationRequest)
+	var req *authentication.AuthorizationRequest = new(authentication.AuthorizationRequest)
 	ctx := platform.NewHttpContext(c.Request())
 
 	err := c.Bind(req)
@@ -182,7 +182,7 @@ func GetAuthorizationEndpoint(c echo.Context) error {
 	// make sure we have a known default scope and no one sneaks something in
 	req.Scope = platform.AuthorizationProvider().Options().Scope
 
-	ath, status, err := auth.ExchangeToken(ctx, req, platform.AuthorizationProvider().Options().AuthorizationExpiration, c.Request().RemoteAddr)
+	ath, status, err := authentication.ExchangeToken(ctx, req, platform.AuthorizationProvider().Options().AuthorizationExpiration, c.Request().RemoteAddr)
 	if status != http.StatusOK {
 		return ErrorResponse(c, status, err)
 	}
