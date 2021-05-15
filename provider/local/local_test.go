@@ -9,7 +9,6 @@ import (
 
 	"github.com/txsvc/platform/v2"
 	"github.com/txsvc/platform/v2/logging"
-	"github.com/txsvc/platform/v2/tasks"
 )
 
 func TestRegisterPlatform(t *testing.T) {
@@ -69,33 +68,4 @@ func TestErrorReporter(t *testing.T) {
 	err := fmt.Errorf("something went wrong")
 
 	platform.ReportError(err)
-}
-
-func TestDefaultTasks(t *testing.T) {
-	InitLocalProviders()
-
-	task := tasks.HttpTask{
-		Method:  tasks.HttpMethodGet,
-		Request: "http://get.some.stuff",
-		Token:   "abc123",
-		Payload: nil,
-	}
-	err := platform.NewTask(task)
-	assert.Error(t, err)
-}
-
-func TestDefaultAuthorizationProvider(t *testing.T) {
-	InitLocalProviders()
-
-	ap := platform.AuthenticationProvider()
-
-	assert.NotNil(t, ap)
-
-	opts := ap.Options()
-
-	assert.NotNil(t, opts)
-	assert.NotEqual(t, 0, opts.AuthenticationExpiration)
-	assert.NotEqual(t, 0, opts.AuthorizationExpiration)
-	assert.NotEmpty(t, opts.Endpoint)
-	assert.NotEmpty(t, opts.Scope)
 }

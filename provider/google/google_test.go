@@ -34,12 +34,20 @@ func TTestCloudTasks(t *testing.T) {
 	require.True(t, env.Assert("PROJECT_ID"))
 	require.True(t, env.Assert("GOOGLE_APPLICATION_CREDENTIALS"))
 
-	p, err := platform.InitPlatform(context.TODO(), GoogleCloudTaskConfig)
+	ctx := context.TODO()
+
+	p, err := platform.InitPlatform(ctx, GoogleCloudTaskConfig)
 
 	if assert.NoError(t, err) {
 		assert.NotNil(t, p)
 
 		platform.RegisterPlatform(p)
+
+		tp, ok := platform.Provider(platform.ProviderTypeTask)
+		assert.True(t, ok)
+
+		provider := tp.(tasks.HttpTaskProvider)
+		assert.NotNil(t, provider)
 
 		task := tasks.HttpTask{
 			Method:  tasks.HttpMethodGet,
@@ -48,7 +56,8 @@ func TTestCloudTasks(t *testing.T) {
 			//Payload: nil,
 		}
 
-		err := platform.NewTask(task)
+		err := provider.CreateHttpTask(ctx, task)
+
 		assert.NoError(t, err)
 	}
 }

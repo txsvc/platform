@@ -90,7 +90,7 @@ func InitGoogleCloudPlatformProviders() {
 	platform.RegisterPlatform(p)
 }
 
-func NewAppEngineContextProvider(ID string) interface{} {
+func NewAppEngineContextProvider() interface{} {
 	return &AppEngineContextImpl{}
 }
 
@@ -102,7 +102,7 @@ func (c *AppEngineContextImpl) Close() error {
 	return nil
 }
 
-func NewStackdriverErrorReportingProvider(ID string) interface{} {
+func NewStackdriverErrorReportingProvider() interface{} {
 	projectID := env.GetString("PROJECT_ID", "")
 	serviceName := env.GetString("SERVICE_NAME", "default")
 
@@ -132,9 +132,9 @@ func (c *GoogleErrorReportingProviderImpl) Close() error {
 	return nil
 }
 
-func NewStackdriverLoggingProvider(ID string) interface{} {
+func NewStackdriverLoggingProvider() interface{} {
 	return &StackdriverLoggingProviderImpl{
-		logger: client.Logger(ID),
+		logger: client.Logger("default"), // FIXME what should this be?
 	}
 }
 
@@ -177,7 +177,7 @@ func (l *StackdriverLoggingProviderImpl) LogWithLevel(lvl logging.Severity, msg 
 
 // see https://pkg.go.dev/go.opentelemetry.io/otel/metric for inspiration
 
-func NewStackdriverMetricsProvider(ID string) interface{} {
+func NewStackdriverMetricsProvider() interface{} {
 	metrics := env.GetString("METRICS_LOG_NAME", "metrics")
 	return &StackdriverLoggingProviderImpl{
 		logger: client.Logger(metrics),
@@ -188,7 +188,7 @@ func (l *StackdriverLoggingProviderImpl) Meter(ctx context.Context, metric strin
 	l.LogWithLevel(logging.Info, metric, args...)
 }
 
-func NewCloudTasksProvider(ID string) interface{} {
+func NewCloudTasksProvider() interface{} {
 	client, err := cloudtasks.NewClient(context.Background())
 	if err != nil {
 		return nil

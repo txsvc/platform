@@ -6,12 +6,10 @@ import (
 	"log"
 	h "net/http"
 
-	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
 	"github.com/txsvc/platform/v2/metrics"
-	"github.com/txsvc/platform/v2/tasks"
 )
 
 const (
@@ -21,12 +19,14 @@ const (
 	ProviderTypeTask
 	ProviderTypeMetrics
 	ProviderTypeAuthentication
+
+	MsgMissingProvider = "provider '%s' required"
 )
 
 type (
 	ProviderType int
 
-	InstanceProviderFunc func(string) interface{}
+	InstanceProviderFunc func() interface{}
 
 	GenericProvider interface {
 		Close() error
@@ -40,10 +40,8 @@ type (
 
 	Platform struct {
 		errorReportingProvider errorreporting.ErrorReportingProvider
-		httpContextProvider    http.HttpRequestContextProvider
-		backgroundTaskProvider tasks.HttpTaskProvider
 		metricsProvdider       metrics.MetricsProvider
-		authProvider           authentication.AuthenticationProvider
+		httpContextProvider    http.HttpRequestContextProvider
 
 		logger    map[string]logging.LoggingProvider
 		providers map[ProviderType]PlatformOpts
@@ -62,14 +60,12 @@ func init() {
 
 func reset() {
 	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
-	nullLoggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
-	nullErrorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
-	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
-	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newDefaultProvider)
-	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
-	nullAuthConfig := WithProvider("platform.null.auth", ProviderTypeAuthentication, newDefaultProvider)
+	loggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
+	errorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
+	contextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
+	metricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
 
-	p, err := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig, nullAuthConfig)
+	p, err := InitPlatform(context.Background(), loggingConfig, errorReportingConfig, contextConfig, metricsConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -134,15 +130,11 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 
 		switch opt.Type {
 		case ProviderTypeErrorReporter:
-			p.errorReportingProvider = opt.Impl(opt.ID).(errorreporting.ErrorReportingProvider)
+			p.errorReportingProvider = opt.Impl().(errorreporting.ErrorReportingProvider)
 		case ProviderTypeHttpContext:
-			p.httpContextProvider = opt.Impl(opt.ID).(http.HttpRequestContextProvider)
-		case ProviderTypeTask:
-			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
+			p.httpContextProvider = opt.Impl().(http.HttpRequestContextProvider)
 		case ProviderTypeMetrics:
-			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
-		case ProviderTypeAuthentication:
-			p.authProvider = opt.Impl(opt.ID).(authentication.AuthenticationProvider)
+			p.metricsProvdider = opt.Impl().(metrics.MetricsProvider)
 		}
 	}
 	return nil
@@ -172,6 +164,16 @@ func Close() error {
 	return platform.Close()
 }
 
+// Provider returns the registered provider instance if it is defined.
+// The bool flag is set to true if there is a provider and false otherwise.
+func Provider(providerType ProviderType) (interface{}, bool) {
+	opt, ok := platform.providers[providerType]
+	if !ok {
+		return nil, false
+	}
+	return opt.Impl(), true
+}
+
 // WithProvider returns a populated PlatformOption struct.
 func WithProvider(ID string, providerType ProviderType, impl InstanceProviderFunc) PlatformOpts {
 	return PlatformOpts{
@@ -181,6 +183,8 @@ func WithProvider(ID string, providerType ProviderType, impl InstanceProviderFun
 	}
 }
 
+// a set of convenience functions in order to avoid getting the provider impl every time
+
 // Logger returns a logger instance identified by ID
 func Logger(logID string) logging.LoggingProvider {
 	l, ok := platform.logger[logID]
@@ -189,7 +193,7 @@ func Logger(logID string) logging.LoggingProvider {
 		if !ok {
 			return nil
 		}
-		l = opt.Impl(logID).(logging.LoggingProvider)
+		l = opt.Impl().(logging.LoggingProvider)
 		platform.logger[logID] = l
 	}
 	return l
@@ -208,13 +212,4 @@ func ReportError(e error) {
 // NewHttpContext creates a new Http context for request req
 func NewHttpContext(req *h.Request) context.Context {
 	return platform.httpContextProvider.NewHttpContext(req)
-}
-
-// NewTask schedules a new http background task
-func NewTask(task tasks.HttpTask) error {
-	return platform.backgroundTaskProvider.CreateHttpTask(context.Background(), task)
-}
-
-func AuthenticationProvider() authentication.AuthenticationProvider {
-	return platform.authProvider
 }

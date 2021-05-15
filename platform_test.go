@@ -2,10 +2,14 @@ package platform
 
 import (
 	"context"
-	"net/http"
+	htp "net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/txsvc/platform/v2/errorreporting"
+	"github.com/txsvc/platform/v2/http"
+	"github.com/txsvc/platform/v2/logging"
+	"github.com/txsvc/platform/v2/metrics"
 )
 
 type (
@@ -13,11 +17,11 @@ type (
 	}
 )
 
-func newTestProvider(ID string) interface{} {
+func newTestProvider() interface{} {
 	return &TestProviderImpl{}
 }
 
-func (c *TestProviderImpl) NewHttpContext(req *http.Request) context.Context {
+func (c *TestProviderImpl) NewHttpContext(req *htp.Request) context.Context {
 	return context.Background()
 }
 
@@ -38,9 +42,7 @@ func TestInitDefaultPlatform(t *testing.T) {
 	assert.NotNil(t, p)
 	assert.NotNil(t, p.errorReportingProvider)
 	assert.NotNil(t, p.httpContextProvider)
-	assert.NotNil(t, p.backgroundTaskProvider)
 	assert.NotNil(t, p.metricsProvdider)
-	assert.NotNil(t, p.authProvider)
 }
 
 func TestInitPlatform(t *testing.T) {
@@ -56,10 +58,7 @@ func TestInitPlatform(t *testing.T) {
 
 	assert.Nil(t, p.errorReportingProvider)
 	assert.Nil(t, p.httpContextProvider)
-	assert.Nil(t, p.backgroundTaskProvider)
 	assert.Nil(t, p.metricsProvdider)
-	assert.Nil(t, p.authProvider)
-
 }
 
 func TestInitPlatformDuplicateProvider(t *testing.T) {
@@ -123,11 +122,40 @@ func TestRegisterProvider(t *testing.T) {
 
 }
 
-func TestInitAuthenticationProvider(t *testing.T) {
+func TestGetDefaultProviders(t *testing.T) {
 	reset()
 
-	p := DefaultPlatform()
+	p1, ok := Provider(ProviderTypeLogger)
+	assert.True(t, ok)
+	assert.NotNil(t, p1)
 
-	assert.NotNil(t, p.authProvider)
-	assert.NotNil(t, AuthenticationProvider())
+	logger := p1.(logging.LoggingProvider)
+	assert.NotNil(t, logger)
+
+	p2, ok := Provider(ProviderTypeErrorReporter)
+	assert.True(t, ok)
+	assert.NotNil(t, p2)
+
+	errorReporter := p2.(errorreporting.ErrorReportingProvider)
+	assert.NotNil(t, errorReporter)
+
+	p3, ok := Provider(ProviderTypeHttpContext)
+	assert.True(t, ok)
+	assert.NotNil(t, p3)
+
+	httpContext := p3.(http.HttpRequestContextProvider)
+	assert.NotNil(t, httpContext)
+
+	p4, ok := Provider(ProviderTypeMetrics)
+	assert.True(t, ok)
+	assert.NotNil(t, p4)
+
+	metrics := p4.(metrics.MetricsProvider)
+	assert.NotNil(t, metrics)
+}
+
+func TestGetProviderFailure(t *testing.T) {
+	p1, ok := Provider(ProviderTypeTask)
+	assert.False(t, ok)
+	assert.Nil(t, p1)
 }
