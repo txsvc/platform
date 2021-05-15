@@ -90,8 +90,12 @@ func TestDefaultAuthorizationProvider(t *testing.T) {
 	ap := platform.AuthorizationProvider()
 
 	assert.NotNil(t, ap)
-	assert.NotEqual(t, 0, ap.AuthenticationExpiration())
-	assert.NotEqual(t, 0, ap.AuthorizationExpiration())
-	assert.NotEmpty(t, ap.Endpoint())
-	assert.NotEmpty(t, ap.Scope())
+
+	opts := ap.Options()
+
+	assert.NotNil(t, opts)
+	assert.NotEqual(t, 0, opts.AuthenticationExpiration)
+	assert.NotEqual(t, 0, opts.AuthorizationExpiration)
+	assert.NotEmpty(t, opts.Endpoint)
+	assert.NotEmpty(t, opts.Scope)
 }

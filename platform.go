@@ -21,7 +21,7 @@ const (
 	ProviderTypeHttpContext
 	ProviderTypeTask
 	ProviderTypeMetrics
-	ProviderTypeAuth
+	ProviderTypeAuthentication
 )
 
 type (
@@ -68,7 +68,7 @@ func reset() {
 	nullContextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
 	nullTaskConfig := WithProvider("platform.null.task", ProviderTypeTask, newDefaultProvider)
 	nullMetricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
-	nullAuthConfig := WithProvider("platform.null.auth", ProviderTypeAuth, newDefaultProvider)
+	nullAuthConfig := WithProvider("platform.null.auth", ProviderTypeAuthentication, newDefaultProvider)
 
 	p, err := InitPlatform(context.Background(), nullLoggingConfig, nullErrorReportingConfig, nullContextConfig, nullTaskConfig, nullMetricsConfig, nullAuthConfig)
 	if err != nil {
@@ -90,8 +90,8 @@ func (l ProviderType) String() string {
 		return "TASK"
 	case ProviderTypeMetrics:
 		return "METRICS"
-	case ProviderTypeAuth:
-		return "AUTH"
+	case ProviderTypeAuthentication:
+		return "AUTHENTICATION"
 	default:
 		panic("unsupported")
 	}
@@ -142,7 +142,7 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 			p.backgroundTaskProvider = opt.Impl(opt.ID).(tasks.HttpTaskProvider)
 		case ProviderTypeMetrics:
 			p.metricsProvdider = opt.Impl(opt.ID).(metrics.MetricsProvider)
-		case ProviderTypeAuth:
+		case ProviderTypeAuthentication:
 			p.authProvider = opt.Impl(opt.ID).(auth.AuthorizationProvider)
 		}
 	}

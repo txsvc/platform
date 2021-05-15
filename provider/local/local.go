@@ -38,7 +38,7 @@ var (
 	DefaultContextConfig        platform.PlatformOpts = platform.WithProvider("platform.default.context", platform.ProviderTypeHttpContext, NewLocalProvider)
 	DefaultTaskConfig           platform.PlatformOpts = platform.WithProvider("platform.default.task", platform.ProviderTypeTask, NewLocalProvider)
 	DefaultMetricsConfig        platform.PlatformOpts = platform.WithProvider("platform.default.metrics", platform.ProviderTypeMetrics, NewLocalProvider)
-	DefaultAuthConfig           platform.PlatformOpts = platform.WithProvider("platform.default.auth", platform.ProviderTypeAuth, NewLocalProvider)
+	DefaultAuthConfig           platform.PlatformOpts = platform.WithProvider("platform.default.auth", platform.ProviderTypeAuthentication, NewLocalProvider)
 
 	errorReportingClient *LocalErrorReportingProviderImpl
 
@@ -175,18 +175,11 @@ func (a *LocalProviderImpl) ProvideAuthorizationToken(ctx context.Context, accou
 	return nil
 }
 
-func (a *LocalProviderImpl) Scope() string {
-	return auth.DefaultScope
-}
-
-func (a *LocalProviderImpl) Endpoint() string {
-	return auth.DefaultEndpoint
-}
-
-func (a *LocalProviderImpl) AuthenticationExpiration() int {
-	return auth.DefaultAuthenticationExpiration
-}
-
-func (a *LocalProviderImpl) AuthorizationExpiration() int {
-	return auth.DefaultAuthorizationExpiration
+func (a *LocalProviderImpl) Options() *auth.AuthenticationProviderOpts {
+	return &auth.AuthenticationProviderOpts{
+		Scope:                    auth.DefaultScope,
+		Endpoint:                 auth.DefaultEndpoint,
+		AuthenticationExpiration: auth.DefaultAuthenticationExpiration,
+		AuthorizationExpiration:  auth.DefaultAuthorizationExpiration,
+	}
 }

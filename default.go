@@ -38,16 +38,24 @@ func newDefaultProvider(ID string) interface{} {
 	return &defaultProviderImpl{}
 }
 
+// IF GenericProvider
+
 func (np *defaultProviderImpl) Close() error {
 	return nil
 }
+
+// IF http.HttpRequestContextProvider
 
 func (np *defaultProviderImpl) NewHttpContext(req *h.Request) context.Context {
 	return context.TODO()
 }
 
+// IF errorreporting.ErrorReportingProvider
+
 func (np *defaultProviderImpl) ReportError(e error) {
 }
+
+// IF logging.LoggingProvider
 
 func (np *defaultProviderImpl) Log(msg string, keyValuePairs ...string) {
 }
@@ -55,12 +63,18 @@ func (np *defaultProviderImpl) Log(msg string, keyValuePairs ...string) {
 func (np *defaultProviderImpl) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...string) {
 }
 
+// IF metrics.MetricsProvider
+
 func (np *defaultProviderImpl) Meter(ctx context.Context, metric string, args ...string) {
 }
+
+// IF tasks.HttpTaskProvider
 
 func (np *defaultProviderImpl) CreateHttpTask(ctx context.Context, task tasks.HttpTask) error {
 	return fmt.Errorf("not implemented")
 }
+
+// IF auth.AuthorizationProvider
 
 // AccountChallengeNotification sends a notification to the user promting to confirm the account
 func (np *defaultProviderImpl) AccountChallengeNotification(ctx context.Context, account *account.Account) error {
@@ -72,18 +86,11 @@ func (np *defaultProviderImpl) ProvideAuthorizationToken(ctx context.Context, ac
 	return nil
 }
 
-func (np *defaultProviderImpl) Scope() string {
-	return auth.DefaultScope
-}
-
-func (np *defaultProviderImpl) Endpoint() string {
-	return auth.DefaultEndpoint
-}
-
-func (np *defaultProviderImpl) AuthenticationExpiration() int {
-	return auth.DefaultAuthenticationExpiration
-}
-
-func (np *defaultProviderImpl) AuthorizationExpiration() int {
-	return auth.DefaultAuthorizationExpiration
+func (np *defaultProviderImpl) Options() *auth.AuthenticationProviderOpts {
+	return &auth.AuthenticationProviderOpts{
+		Scope:                    auth.DefaultScope,
+		Endpoint:                 auth.DefaultEndpoint,
+		AuthenticationExpiration: auth.DefaultAuthenticationExpiration,
+		AuthorizationExpiration:  auth.DefaultAuthorizationExpiration,
+	}
 }

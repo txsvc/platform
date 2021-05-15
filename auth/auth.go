@@ -67,14 +67,29 @@ type (
 		AccountChallengeNotification(context.Context, *account.Account) error
 		// Send the new token
 		ProvideAuthorizationToken(context.Context, *account.Account) error
-		// Scope returns the default scope
-		Scope() string
-		// Endpoint returns the default endpoint url
-		Endpoint() string
-		// AuthenticationExpiration in minutes
-		AuthenticationExpiration() int
-		// AuthorizationExpiration in days
-		AuthorizationExpiration() int
+
+		// Options returns the provider configuration
+		Options() *AuthenticationProviderOpts
+
+		/*
+			// FIXME move these into a struct and just return it
+
+			// Scope returns the default scope
+			Scope() string
+			// Endpoint returns the default endpoint url
+			Endpoint() string
+			// AuthenticationExpiration in minutes
+			AuthenticationExpiration() int
+			// AuthorizationExpiration in days
+			AuthorizationExpiration() int
+		*/
+	}
+
+	AuthenticationProviderOpts struct {
+		Scope                    string
+		Endpoint                 string
+		AuthenticationExpiration int
+		AuthorizationExpiration  int
 	}
 )
 

@@ -42,7 +42,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	// new account
 	if acc == nil {
 		// #1: create a new account
-		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, platform.AuthorizationProvider().AuthenticationExpiration())
+		acc, err = account.CreateAccount(ctx, req.Realm, req.UserID, platform.AuthorizationProvider().Options().AuthenticationExpiration)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -58,7 +58,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	// existing account but check some stuff first ...
 	if acc.Confirmed == 0 {
 		// #1: update the expiration timestamp
-		acc, err = account.ResetAccountChallenge(ctx, acc, platform.AuthorizationProvider().AuthenticationExpiration())
+		acc, err = account.ResetAccountChallenge(ctx, acc, platform.AuthorizationProvider().Options().AuthenticationExpiration)
 		if err != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, err)
 		}
@@ -76,7 +76,7 @@ func LoginRequestEndpoint(c echo.Context) error {
 	}
 
 	// create and send the auth token
-	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().AuthenticationExpiration())
+	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().Options().AuthenticationExpiration)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -146,7 +146,7 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 		return ErrorResponse(c, status, err)
 	}
 
-	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().AuthenticationExpiration())
+	acc, err = account.ResetTemporaryToken(ctx, acc, platform.AuthorizationProvider().Options().AuthenticationExpiration)
 	if err != nil {
 		return ErrorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -157,7 +157,7 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 	}
 
 	// status 307: account is confirmed, email with auth token sent, redirect now
-	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", platform.AuthorizationProvider().Endpoint()))
+	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", platform.AuthorizationProvider().Options().Endpoint))
 }
 
 // GetAuthorizationEndpoint exchanges a temporary confirmation token for a 'real' token.
@@ -180,9 +180,9 @@ func GetAuthorizationEndpoint(c echo.Context) error {
 	}
 
 	// make sure we have a known default scope and no one sneaks something in
-	req.Scope = platform.AuthorizationProvider().Scope()
+	req.Scope = platform.AuthorizationProvider().Options().Scope
 
-	ath, status, err := auth.ExchangeToken(ctx, req, platform.AuthorizationProvider().AuthorizationExpiration(), c.Request().RemoteAddr)
+	ath, status, err := auth.ExchangeToken(ctx, req, platform.AuthorizationProvider().Options().AuthorizationExpiration, c.Request().RemoteAddr)
 	if status != http.StatusOK {
 		return ErrorResponse(c, status, err)
 	}
