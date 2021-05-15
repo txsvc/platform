@@ -39,7 +39,7 @@ func ErrorResponse(c echo.Context, status int, err error) error {
 	platform.ReportError(err)
 
 	if err == nil {
-		resp = NewStatus(http.StatusInternalServerError, fmt.Sprintf("status: %d", status))
+		resp = NewStatus(http.StatusInternalServerError, fmt.Sprintf("%d", status))
 	} else {
 		resp = NewErrorStatus(status, err)
 	}
@@ -56,6 +56,10 @@ func NewErrorStatus(s int, e error) StatusObject {
 	return StatusObject{Status: s, Message: e.Error(), RootError: e}
 }
 
-func (so *StatusObject) Error() string {
+func (so *StatusObject) String() string {
 	return fmt.Sprintf("%s: %d", so.Message, so.Status)
+}
+
+func (so *StatusObject) Error() string {
+	return so.String()
 }

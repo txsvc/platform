@@ -151,7 +151,6 @@ func ConfirmLoginChallenge(ctx context.Context, token string) (*account.Account,
 	if token == "" {
 		return nil, http.StatusUnauthorized, ErrNoToken
 	}
-
 	acc, err := account.FindAccountByToken(ctx, token)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err

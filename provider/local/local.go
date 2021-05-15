@@ -8,10 +8,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/txsvc/platform/v2"
+	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/errorreporting"
 	"github.com/txsvc/platform/v2/http"
 	"github.com/txsvc/platform/v2/logging"
 	"github.com/txsvc/platform/v2/metrics"
+	"github.com/txsvc/platform/v2/pkg/account"
 )
 
 type (
@@ -26,13 +28,17 @@ type (
 	LocalErrorReportingProviderImpl struct {
 		log *zap.SugaredLogger
 	}
+
+	LocalAuthenticationProviderImpl struct {
+	}
 )
 
 var (
-	DefaultLoggingConfig        platform.PlatformOpts = platform.WithProvider("platform.default.logger", platform.ProviderTypeLogger, NewLocalLoggingProvider)
-	DefaultErrorReportingConfig platform.PlatformOpts = platform.WithProvider("platform.default.errorreporting", platform.ProviderTypeErrorReporter, NewLocalErrorReportingProvider)
-	DefaultContextConfig        platform.PlatformOpts = platform.WithProvider("platform.default.context", platform.ProviderTypeHttpContext, NewLocalProvider)
-	DefaultMetricsConfig        platform.PlatformOpts = platform.WithProvider("platform.default.metrics", platform.ProviderTypeMetrics, NewLocalProvider)
+	loggingConfig        platform.PlatformOpts = platform.WithProvider("platform.default.logger", platform.ProviderTypeLogger, LocalLoggingProvider)
+	errorReportingConfig platform.PlatformOpts = platform.WithProvider("platform.default.errorreporting", platform.ProviderTypeErrorReporter, LocalErrorReportingProvider)
+	contextConfig        platform.PlatformOpts = platform.WithProvider("platform.default.context", platform.ProviderTypeHttpContext, LocalHttpContextProvider)
+	metricsConfig        platform.PlatformOpts = platform.WithProvider("platform.default.metrics", platform.ProviderTypeMetrics, LocalMetricsProvider)
+	authenticationConfig platform.PlatformOpts = platform.WithProvider("platform.default.authentication", platform.ProviderTypeAuthentication, LocalAuthenticationProvider)
 
 	errorReportingClient *LocalErrorReportingProviderImpl
 
@@ -46,6 +52,9 @@ var (
 
 	_ platform.GenericProvider = (*LocalLoggingProviderImpl)(nil)
 	_ logging.LoggingProvider  = (*LocalLoggingProviderImpl)(nil)
+
+	_ platform.GenericProvider              = (*LocalAuthenticationProviderImpl)(nil)
+	_ authentication.AuthenticationProvider = (*LocalAuthenticationProviderImpl)(nil)
 )
 
 func init() {
@@ -63,14 +72,18 @@ func init() {
 }
 
 func InitLocalProviders() {
-	p, err := platform.InitPlatform(context.Background(), DefaultLoggingConfig, DefaultErrorReportingConfig, DefaultContextConfig, DefaultMetricsConfig)
+	p, err := platform.InitPlatform(context.Background(), loggingConfig, errorReportingConfig, contextConfig, metricsConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
 	platform.RegisterPlatform(p)
 }
 
-func NewLocalProvider() interface{} {
+func LocalHttpContextProvider() interface{} {
+	return &LocalProviderImpl{}
+}
+
+func LocalMetricsProvider() interface{} {
 	return &LocalProviderImpl{}
 }
 
@@ -82,7 +95,7 @@ func (c *LocalProviderImpl) NewHttpContext(req *h.Request) context.Context {
 	return context.Background()
 }
 
-func NewLocalLoggingProvider() interface{} {
+func LocalLoggingProvider() interface{} {
 	callerSkipConf := zap.AddCallerSkip(1)
 
 	l, err := zap.NewProduction(callerSkipConf)
@@ -142,7 +155,7 @@ func (er *LocalErrorReportingProviderImpl) Close() error {
 	return nil
 }
 
-func NewLocalErrorReportingProvider() interface{} {
+func LocalErrorReportingProvider() interface{} {
 	return errorReportingClient
 }
 
@@ -152,4 +165,31 @@ func (er *LocalErrorReportingProviderImpl) ReportError(e error) {
 
 func (m *LocalProviderImpl) Meter(ctx context.Context, metric string, args ...string) {
 	// actually does nothing right now
+}
+
+func LocalAuthenticationProvider() interface{} {
+	return &LocalAuthenticationProviderImpl{}
+}
+
+func (a *LocalAuthenticationProviderImpl) Close() error {
+	return nil
+}
+
+// AccountChallengeNotification sends a notification to the user promting to confirm the account
+func (a *LocalAuthenticationProviderImpl) AccountChallengeNotification(ctx context.Context, account *account.Account) error {
+	return nil
+}
+
+// ProvideAuthorizationToken sends a notification to the user with the current authentication token
+func (a *LocalAuthenticationProviderImpl) ProvideAuthorizationToken(ctx context.Context, account *account.Account) error {
+	return nil
+}
+
+func (a *LocalAuthenticationProviderImpl) Options() *authentication.AuthenticationProviderOpts {
+	return &authentication.AuthenticationProviderOpts{
+		Scope:                    authentication.DefaultScope,
+		Endpoint:                 authentication.DefaultEndpoint,
+		AuthenticationExpiration: authentication.DefaultAuthenticationExpiration,
+		AuthorizationExpiration:  authentication.DefaultAuthorizationExpiration,
+	}
 }

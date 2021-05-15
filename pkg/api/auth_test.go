@@ -13,9 +13,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/txsvc/platform/v2"
 	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/pkg/account"
 	ds "github.com/txsvc/platform/v2/pkg/datastore"
+	"github.com/txsvc/platform/v2/provider/local"
 )
 
 const (
@@ -27,6 +29,13 @@ const (
 	logoutRequestRoute     = "/logout"
 	getAuthorizationRoute  = "/auth"
 )
+
+func init() {
+	opts := platform.WithProvider("platform.default.authentication", platform.ProviderTypeAuthentication, local.LocalAuthenticationProvider)
+
+	local.InitLocalProviders()
+	platform.DefaultPlatform().RegisterProviders(false, opts)
+}
 
 // Scenario 1: new account, login, account confirmation, token swap
 func TestLoginScenario1(t *testing.T) {
