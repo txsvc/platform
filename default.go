@@ -11,6 +11,7 @@ import (
 	"github.com/txsvc/platform/v2/logging"
 	"github.com/txsvc/platform/v2/metrics"
 	"github.com/txsvc/platform/v2/pkg/account"
+	"github.com/txsvc/platform/v2/state"
 	"github.com/txsvc/platform/v2/tasks"
 )
 
@@ -22,6 +23,7 @@ type (
 
 var (
 	// Interface guards.
+
 	// This enforces a compile-time check of the provider implmentation,
 	// making sure all the methods defined in the provider interfaces are implemented.
 	_ GenericProvider                       = (*defaultProviderImpl)(nil)
@@ -31,6 +33,7 @@ var (
 	_ metrics.MetricsProvider               = (*defaultProviderImpl)(nil)
 	_ tasks.HttpTaskProvider                = (*defaultProviderImpl)(nil)
 	_ authentication.AuthenticationProvider = (*defaultProviderImpl)(nil)
+	_ state.StateProvider                   = (*defaultProviderImpl)(nil)
 )
 
 // a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
@@ -93,4 +96,16 @@ func (np *defaultProviderImpl) Options() *authentication.AuthenticationProviderO
 		AuthenticationExpiration: authentication.DefaultAuthenticationExpiration,
 		AuthorizationExpiration:  authentication.DefaultAuthorizationExpiration,
 	}
+}
+
+// IF state.StateProvider
+
+func (np *defaultProviderImpl) DecodeKey(encoded string) (*state.Key, error) {
+	return nil, nil
+}
+
+func (np *defaultProviderImpl) NewKey(kind, key string) (*state.Key, error) {
+	k := state.NewKey(kind, key)
+	a := k.(*state.Key)
+	return a, nil
 }
