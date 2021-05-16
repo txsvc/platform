@@ -1,20 +1,21 @@
-package platform
+package datastore
 
 import (
 	"context"
 	"errors"
 	"log"
 
-	"cloud.google.com/go/datastore"
+	ds "cloud.google.com/go/datastore"
 	"cloud.google.com/go/storage"
 
+	"github.com/txsvc/platform/v2"
 	"github.com/txsvc/platform/v2/pkg/env"
 )
 
 type (
 	// Client holds all clients needed to access basic Google Cloud services
 	Client struct {
-		DatastoreClient *datastore.Client
+		DatastoreClient *ds.Client
 		StorageClient   *storage.Client
 	}
 )
@@ -22,22 +23,16 @@ type (
 var (
 	client *Client
 
-	ErrInvalidConf = errors.New("invalid configuration")
-	ErrNoDatastore = errors.New("datastore is not initialized")
-	ErrNoStorage   = errors.New("cloud storage is not initialized")
+	ErrInvalidConf = errors.New("missing PROJECT_ID")
+	ErrNoDatastore = errors.New("google datastore is not initialized")
+	ErrNoStorage   = errors.New("google cloud storage is not initialized")
 )
 
 func init() {
-	if client != nil {
-		return // singleton
-	}
-
 	cl, err := NewClient(context.Background(), env.GetString("PROJECT_ID", ""), env.GetString("SERVICE_NAME", "default"))
-
 	if err != nil {
-		log.Fatal(err)
+		platform.ReportError(err)
 	}
-
 	client = cl
 }
 
@@ -53,7 +48,7 @@ func NewClient(ctx context.Context, projectID, serviceName string) (*Client, err
 	}
 
 	// initialize Cloud Datastore
-	ds, err := datastore.NewClient(ctx, projectID)
+	ds, err := ds.NewClient(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +88,7 @@ func Close() {
 }
 
 // DataStore returns a reference to the datastore client
-func DataStore() *datastore.Client {
+func DataStore() *ds.Client {
 	if client.DatastoreClient != nil {
 		return client.DatastoreClient
 	}

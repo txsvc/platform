@@ -1,4 +1,4 @@
-package platform
+package datastore
 
 import (
 	"context"
