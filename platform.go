@@ -6,46 +6,22 @@ import (
 	"log"
 	h "net/http"
 
-	"github.com/txsvc/platform/v2/errorreporting"
-	"github.com/txsvc/platform/v2/http"
-	"github.com/txsvc/platform/v2/logging"
-	"github.com/txsvc/platform/v2/metrics"
+	"github.com/txsvc/platform/v2/pkg/apis/provider"
 )
 
 const (
-	ProviderTypeLogger ProviderType = iota
-	ProviderTypeErrorReporter
-	ProviderTypeHttpContext
-	ProviderTypeTask
-	ProviderTypeMetrics
-	ProviderTypeAuthentication
-
 	MsgMissingProvider = "provider '%s' required"
 )
 
 type (
-	ProviderType int
-
-	InstanceProviderFunc func() interface{}
-
-	GenericProvider interface {
-		Close() error
-	}
-
-	PlatformOpts struct {
-		ID   string
-		Type ProviderType
-		Impl InstanceProviderFunc
-	}
-
 	Platform struct {
-		errorReportingProvider errorreporting.ErrorReportingProvider
-		metricsProvdider       metrics.MetricsProvider
-		httpContextProvider    http.HttpRequestContextProvider
+		errorReportingProvider provider.ErrorReportingProvider
+		metricsProvdider       provider.MetricsProvider
+		httpContextProvider    provider.HttpContextProvider
 
-		logger    map[string]logging.LoggingProvider
-		providers map[ProviderType]PlatformOpts
-		instances map[ProviderType]GenericProvider
+		logger    map[string]provider.LoggingProvider
+		providers map[provider.ProviderType]provider.ProviderConfig
+		instances map[provider.ProviderType]provider.GenericProvider
 	}
 )
 
@@ -60,10 +36,10 @@ func init() {
 
 func reset() {
 	// initialize the platform with a NULL provider that prevents NPEs in case someone forgets to initialize the platform with a real platform provider
-	loggingConfig := WithProvider("platform.null.logger", ProviderTypeLogger, newDefaultProvider)
-	errorReportingConfig := WithProvider("platform.null.errorreporting", ProviderTypeErrorReporter, newDefaultProvider)
-	contextConfig := WithProvider("platform.null.context", ProviderTypeHttpContext, newDefaultProvider)
-	metricsConfig := WithProvider("platform.null.metrics", ProviderTypeMetrics, newDefaultProvider)
+	loggingConfig := provider.WithProvider("platform.null.logger", provider.TypeLogger, provider.NewDefaultProvider)
+	errorReportingConfig := provider.WithProvider("platform.null.errorreporting", provider.TypeErrorReporter, provider.NewDefaultProvider)
+	contextConfig := provider.WithProvider("platform.null.context", provider.TypeHttpContext, provider.NewDefaultProvider)
+	metricsConfig := provider.WithProvider("platform.null.metrics", provider.TypeMetrics, provider.NewDefaultProvider)
 
 	p, err := InitPlatform(context.Background(), loggingConfig, errorReportingConfig, contextConfig, metricsConfig)
 	if err != nil {
@@ -72,31 +48,11 @@ func reset() {
 	RegisterPlatform(p)
 }
 
-// Returns the name of a provider type
-func (l ProviderType) String() string {
-	switch l {
-	case ProviderTypeLogger:
-		return "LOGGER"
-	case ProviderTypeErrorReporter:
-		return "ERROR_REPORTER"
-	case ProviderTypeHttpContext:
-		return "HTTP_CONTEXT"
-	case ProviderTypeTask:
-		return "TASK"
-	case ProviderTypeMetrics:
-		return "METRICS"
-	case ProviderTypeAuthentication:
-		return "AUTHENTICATION"
-	default:
-		panic("unsupported")
-	}
-}
-
 // InitPlatform creates a new platform instance and configures it with providers
-func InitPlatform(ctx context.Context, opts ...PlatformOpts) (*Platform, error) {
+func InitPlatform(ctx context.Context, opts ...provider.ProviderConfig) (*Platform, error) {
 	p := Platform{
-		logger:    make(map[string]logging.LoggingProvider),
-		providers: make(map[ProviderType]PlatformOpts),
+		logger:    make(map[string]provider.LoggingProvider),
+		providers: make(map[provider.ProviderType]provider.ProviderConfig),
 	}
 
 	if err := p.RegisterProviders(false, opts...); err != nil {
@@ -118,7 +74,7 @@ func RegisterPlatform(p *Platform) *Platform {
 
 // RegisterProviders registers one or more  providers.
 // An existing provider will be overwritten if ignoreExists is true, otherwise the function returns an error.
-func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) error {
+func (p *Platform) RegisterProviders(ignoreExists bool, opts ...provider.ProviderConfig) error {
 	for _, opt := range opts {
 
 		if _, ok := p.providers[opt.Type]; ok {
@@ -129,12 +85,12 @@ func (p *Platform) RegisterProviders(ignoreExists bool, opts ...PlatformOpts) er
 		p.providers[opt.Type] = opt
 
 		switch opt.Type {
-		case ProviderTypeErrorReporter:
-			p.errorReportingProvider = opt.Impl().(errorreporting.ErrorReportingProvider)
-		case ProviderTypeHttpContext:
-			p.httpContextProvider = opt.Impl().(http.HttpRequestContextProvider)
-		case ProviderTypeMetrics:
-			p.metricsProvdider = opt.Impl().(metrics.MetricsProvider)
+		case provider.TypeErrorReporter:
+			p.errorReportingProvider = opt.Impl().(provider.ErrorReportingProvider)
+		case provider.TypeHttpContext:
+			p.httpContextProvider = opt.Impl().(provider.HttpContextProvider)
+		case provider.TypeMetrics:
+			p.metricsProvdider = opt.Impl().(provider.MetricsProvider)
 		}
 	}
 	return nil
@@ -166,7 +122,7 @@ func Close() error {
 
 // Provider returns the registered provider instance if it is defined.
 // The bool flag is set to true if there is a provider and false otherwise.
-func Provider(providerType ProviderType) (interface{}, bool) {
+func Provider(providerType provider.ProviderType) (interface{}, bool) {
 	opt, ok := platform.providers[providerType]
 	if !ok {
 		return nil, false
@@ -174,26 +130,17 @@ func Provider(providerType ProviderType) (interface{}, bool) {
 	return opt.Impl(), true
 }
 
-// WithProvider returns a populated PlatformOption struct.
-func WithProvider(ID string, providerType ProviderType, impl InstanceProviderFunc) PlatformOpts {
-	return PlatformOpts{
-		ID:   ID,
-		Type: providerType,
-		Impl: impl,
-	}
-}
-
 // a set of convenience functions in order to avoid getting the provider impl every time
 
 // Logger returns a logger instance identified by ID
-func Logger(logID string) logging.LoggingProvider {
+func Logger(logID string) provider.LoggingProvider {
 	l, ok := platform.logger[logID]
 	if !ok {
-		opt, ok := platform.providers[ProviderTypeLogger]
+		opt, ok := platform.providers[provider.TypeLogger]
 		if !ok {
 			return nil
 		}
-		l = opt.Impl().(logging.LoggingProvider)
+		l = opt.Impl().(provider.LoggingProvider)
 		platform.logger[logID] = l
 	}
 	return l

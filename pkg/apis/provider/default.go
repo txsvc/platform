@@ -1,13 +1,8 @@
-package platform
+package provider
 
 import (
 	"context"
 	h "net/http"
-
-	"github.com/txsvc/platform/v2/errorreporting"
-	"github.com/txsvc/platform/v2/http"
-	"github.com/txsvc/platform/v2/logging"
-	"github.com/txsvc/platform/v2/metrics"
 )
 
 type (
@@ -22,15 +17,15 @@ var (
 	// This enforces a compile-time check of the provider implmentation,
 	// making sure all the methods defined in the provider interfaces are implemented.
 
-	_ GenericProvider                       = (*defaultProviderImpl)(nil)
-	_ http.HttpRequestContextProvider       = (*defaultProviderImpl)(nil)
-	_ errorreporting.ErrorReportingProvider = (*defaultProviderImpl)(nil)
-	_ logging.LoggingProvider               = (*defaultProviderImpl)(nil)
-	_ metrics.MetricsProvider               = (*defaultProviderImpl)(nil)
+	_ GenericProvider        = (*defaultProviderImpl)(nil)
+	_ HttpContextProvider    = (*defaultProviderImpl)(nil)
+	_ ErrorReportingProvider = (*defaultProviderImpl)(nil)
+	_ LoggingProvider        = (*defaultProviderImpl)(nil)
+	_ MetricsProvider        = (*defaultProviderImpl)(nil)
 )
 
 // a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
-func newDefaultProvider() interface{} {
+func NewDefaultProvider() interface{} {
 	return &defaultProviderImpl{}
 }
 
@@ -40,23 +35,23 @@ func (np *defaultProviderImpl) Close() error {
 	return nil
 }
 
-// IF http.HttpRequestContextProvider
+// IF provider.HttpRequestContextProvider
 
 func (np *defaultProviderImpl) NewHttpContext(req *h.Request) context.Context {
 	return context.TODO()
 }
 
-// IF errorreporting.ErrorReportingProvider
+// IF provider.ErrorReportingProvider
 
 func (np *defaultProviderImpl) ReportError(e error) {
 }
 
-// IF logging.LoggingProvider
+// IF provider.LoggingProvider
 
 func (np *defaultProviderImpl) Log(msg string, keyValuePairs ...string) {
 }
 
-func (np *defaultProviderImpl) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...string) {
+func (np *defaultProviderImpl) LogWithLevel(lvl Severity, msg string, keyValuePairs ...string) {
 }
 
 // IF metrics.MetricsProvider

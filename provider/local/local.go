@@ -9,11 +9,9 @@ import (
 
 	"github.com/txsvc/platform/v2"
 	"github.com/txsvc/platform/v2/authentication"
-	"github.com/txsvc/platform/v2/errorreporting"
-	"github.com/txsvc/platform/v2/http"
-	"github.com/txsvc/platform/v2/logging"
-	"github.com/txsvc/platform/v2/metrics"
+
 	"github.com/txsvc/platform/v2/pkg/account"
+	"github.com/txsvc/platform/v2/pkg/apis/provider"
 )
 
 type (
@@ -21,7 +19,7 @@ type (
 	}
 
 	LocalLoggingProviderImpl struct {
-		lvl logging.Severity
+		lvl provider.Severity
 		log *zap.SugaredLogger
 	}
 
@@ -34,26 +32,26 @@ type (
 )
 
 var (
-	loggingConfig        platform.PlatformOpts = platform.WithProvider("platform.default.logger", platform.ProviderTypeLogger, LocalLoggingProvider)
-	errorReportingConfig platform.PlatformOpts = platform.WithProvider("platform.default.errorreporting", platform.ProviderTypeErrorReporter, LocalErrorReportingProvider)
-	contextConfig        platform.PlatformOpts = platform.WithProvider("platform.default.context", platform.ProviderTypeHttpContext, LocalHttpContextProvider)
-	metricsConfig        platform.PlatformOpts = platform.WithProvider("platform.default.metrics", platform.ProviderTypeMetrics, LocalMetricsProvider)
-	authenticationConfig platform.PlatformOpts = platform.WithProvider("platform.default.authentication", platform.ProviderTypeAuthentication, LocalAuthenticationProvider)
+	loggingConfig        provider.ProviderConfig = provider.WithProvider("platform.default.logger", provider.TypeLogger, LocalLoggingProvider)
+	errorReportingConfig provider.ProviderConfig = provider.WithProvider("platform.default.errorreporting", provider.TypeErrorReporter, LocalErrorReportingProvider)
+	contextConfig        provider.ProviderConfig = provider.WithProvider("platform.default.context", provider.TypeHttpContext, LocalHttpContextProvider)
+	metricsConfig        provider.ProviderConfig = provider.WithProvider("platform.default.metrics", provider.TypeMetrics, LocalMetricsProvider)
+	authenticationConfig provider.ProviderConfig = provider.WithProvider("platform.default.authentication", provider.TypeAuthentication, LocalAuthenticationProvider)
 
 	errorReportingClient *LocalErrorReportingProviderImpl
 
 	// Interface guards
-	_ platform.GenericProvider        = (*LocalProviderImpl)(nil)
-	_ http.HttpRequestContextProvider = (*LocalProviderImpl)(nil)
-	_ metrics.MetricsProvider         = (*LocalProviderImpl)(nil)
+	_ provider.GenericProvider     = (*LocalProviderImpl)(nil)
+	_ provider.HttpContextProvider = (*LocalProviderImpl)(nil)
+	_ provider.MetricsProvider     = (*LocalProviderImpl)(nil)
 
-	_ platform.GenericProvider              = (*LocalErrorReportingProviderImpl)(nil)
-	_ errorreporting.ErrorReportingProvider = (*LocalErrorReportingProviderImpl)(nil)
+	_ provider.GenericProvider        = (*LocalErrorReportingProviderImpl)(nil)
+	_ provider.ErrorReportingProvider = (*LocalErrorReportingProviderImpl)(nil)
 
-	_ platform.GenericProvider = (*LocalLoggingProviderImpl)(nil)
-	_ logging.LoggingProvider  = (*LocalLoggingProviderImpl)(nil)
+	_ provider.GenericProvider = (*LocalLoggingProviderImpl)(nil)
+	_ provider.LoggingProvider = (*LocalLoggingProviderImpl)(nil)
 
-	_ platform.GenericProvider              = (*LocalAuthenticationProviderImpl)(nil)
+	_ provider.GenericProvider              = (*LocalAuthenticationProviderImpl)(nil)
 	_ authentication.AuthenticationProvider = (*LocalAuthenticationProviderImpl)(nil)
 )
 
@@ -104,7 +102,7 @@ func LocalLoggingProvider() interface{} {
 	}
 
 	logger := LocalLoggingProviderImpl{
-		lvl: logging.Info,
+		lvl: provider.LevelInfo,
 		log: l.Sugar(),
 	}
 
@@ -119,7 +117,7 @@ func (l *LocalLoggingProviderImpl) Log(msg string, keyValuePairs ...string) {
 	l.LogWithLevel(l.lvl, msg, keyValuePairs...)
 }
 
-func (l *LocalLoggingProviderImpl) LogWithLevel(lvl logging.Severity, msg string, keyValuePairs ...string) {
+func (l *LocalLoggingProviderImpl) LogWithLevel(lvl provider.Severity, msg string, keyValuePairs ...string) {
 
 	if len(keyValuePairs) > 0 {
 		params := make([]interface{}, len(keyValuePairs))
@@ -128,24 +126,24 @@ func (l *LocalLoggingProviderImpl) LogWithLevel(lvl logging.Severity, msg string
 		}
 
 		switch lvl {
-		case logging.Info:
+		case provider.LevelInfo:
 			l.log.Infow(msg, params...)
-		case logging.Warn:
+		case provider.LevelWarn:
 			l.log.Warnw(msg, params...)
-		case logging.Error:
+		case provider.LevelError:
 			l.log.Errorw(msg, params...)
-		case logging.Debug:
+		case provider.LevelDebug:
 			l.log.Debugw(msg, params...)
 		}
 	} else {
 		switch lvl {
-		case logging.Info:
+		case provider.LevelInfo:
 			l.log.Infow(msg)
-		case logging.Warn:
+		case provider.LevelWarn:
 			l.log.Warnw(msg)
-		case logging.Error:
+		case provider.LevelError:
 			l.log.Errorw(msg)
-		case logging.Debug:
+		case provider.LevelDebug:
 			l.log.Debugw(msg)
 		}
 	}

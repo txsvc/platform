@@ -9,13 +9,11 @@ import (
 
 	"github.com/txsvc/platform/v2"
 	"github.com/txsvc/platform/v2/authentication"
-	"github.com/txsvc/platform/v2/http"
-	"github.com/txsvc/platform/v2/logging"
-	"github.com/txsvc/platform/v2/metrics"
+	"github.com/txsvc/platform/v2/pkg/apis/provider"
 )
 
 func TestRegisterPlatform(t *testing.T) {
-	dl := platform.PlatformOpts{ID: "platform.logger.default", Type: platform.ProviderTypeLogger, Impl: LocalLoggingProvider}
+	dl := provider.ProviderConfig{ID: "platform.logger.default", Type: provider.TypeLogger, Impl: LocalLoggingProvider}
 	p, err := platform.InitPlatform(context.Background(), dl)
 
 	if assert.NoError(t, err) {
@@ -50,10 +48,10 @@ func TestDefaultLoggerWithLevel(t *testing.T) {
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
-	logger.LogWithLevel(logging.Info, "something happened with level INFO")
-	logger.LogWithLevel(logging.Warn, "something happened with level WARN")
-	logger.LogWithLevel(logging.Error, "something happened with level ERROR")
-	logger.LogWithLevel(logging.Debug, "something happened with level DEBUG")
+	logger.LogWithLevel(provider.LevelInfo, "something happened with level INFO")
+	logger.LogWithLevel(provider.LevelWarn, "something happened with level WARN")
+	logger.LogWithLevel(provider.LevelError, "something happened with level ERROR")
+	logger.LogWithLevel(provider.LevelDebug, "something happened with level DEBUG")
 }
 
 func TestLoggingWithParams(t *testing.T) {
@@ -62,7 +60,7 @@ func TestLoggingWithParams(t *testing.T) {
 	logger := platform.Logger("platform-test-logs")
 	assert.NotNil(t, logger)
 
-	logger.LogWithLevel(logging.Info, "something with parameters happened", "foo", "bar", "question", fmt.Sprintf("%d", 42), "orphan", fmt.Sprintf("%v", true))
+	logger.LogWithLevel(provider.LevelInfo, "something with parameters happened", "foo", "bar", "question", fmt.Sprintf("%d", 42), "orphan", fmt.Sprintf("%v", true))
 }
 
 func TestErrorReportingProvider(t *testing.T) {
@@ -76,11 +74,11 @@ func TestErrorReportingProvider(t *testing.T) {
 func TestHttpContextProvider(t *testing.T) {
 	InitLocalProviders()
 
-	p, ok := platform.Provider(platform.ProviderTypeHttpContext)
+	p, ok := platform.Provider(provider.TypeHttpContext)
 	assert.True(t, ok)
 	assert.NotNil(t, p)
 
-	httpContext := p.(http.HttpRequestContextProvider)
+	httpContext := p.(provider.HttpContextProvider)
 	assert.NotNil(t, httpContext)
 
 	ctx := httpContext.NewHttpContext(nil)
@@ -90,11 +88,11 @@ func TestHttpContextProvider(t *testing.T) {
 func TestMetricsProvider(t *testing.T) {
 	InitLocalProviders()
 
-	p, ok := platform.Provider(platform.ProviderTypeMetrics)
+	p, ok := platform.Provider(provider.TypeMetrics)
 	assert.True(t, ok)
 	assert.NotNil(t, p)
 
-	metrics := p.(metrics.MetricsProvider)
+	metrics := p.(provider.MetricsProvider)
 	assert.NotNil(t, metrics)
 }
 
@@ -102,7 +100,7 @@ func TestAuthenticationProvider(t *testing.T) {
 	InitLocalProviders()
 	platform.DefaultPlatform().RegisterProviders(false, authenticationConfig)
 
-	p, ok := platform.Provider(platform.ProviderTypeAuthentication)
+	p, ok := platform.Provider(provider.TypeAuthentication)
 	assert.True(t, ok)
 	assert.NotNil(t, p)
 

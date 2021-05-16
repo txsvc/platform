@@ -6,10 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/txsvc/platform/v2/errorreporting"
-	"github.com/txsvc/platform/v2/http"
-	"github.com/txsvc/platform/v2/logging"
-	"github.com/txsvc/platform/v2/metrics"
+
+	"github.com/txsvc/platform/v2/pkg/apis/provider"
 )
 
 type (
@@ -26,11 +24,11 @@ func (c *TestProviderImpl) NewHttpContext(req *htp.Request) context.Context {
 }
 
 func TestWithProvider(t *testing.T) {
-	opt := WithProvider("test", ProviderTypeLogger, newTestProvider)
+	opt := provider.WithProvider("test", provider.TypeLogger, newTestProvider)
 	assert.NotNil(t, opt)
 
 	assert.Equal(t, "test", opt.ID)
-	assert.Equal(t, ProviderTypeLogger, opt.Type)
+	assert.Equal(t, provider.TypeLogger, opt.Type)
 	assert.NotNil(t, opt.Impl)
 }
 
@@ -64,8 +62,8 @@ func TestInitPlatform(t *testing.T) {
 func TestInitPlatformDuplicateProvider(t *testing.T) {
 	reset()
 
-	opt1 := WithProvider("test1", ProviderTypeLogger, newTestProvider)
-	opt2 := WithProvider("test2", ProviderTypeLogger, newTestProvider)
+	opt1 := provider.WithProvider("test1", provider.TypeLogger, newTestProvider)
+	opt2 := provider.WithProvider("test2", provider.TypeLogger, newTestProvider)
 
 	p, err := InitPlatform(context.Background(), opt1, opt2)
 	assert.Error(t, err)
@@ -108,7 +106,7 @@ func TestInitLogger(t *testing.T) {
 func TestRegisterProvider(t *testing.T) {
 	reset()
 
-	opt := WithProvider("test", ProviderTypeLogger, newTestProvider)
+	opt := provider.WithProvider("test", provider.TypeLogger, newTestProvider)
 	assert.NotNil(t, opt)
 
 	p := DefaultPlatform()
@@ -125,37 +123,37 @@ func TestRegisterProvider(t *testing.T) {
 func TestGetDefaultProviders(t *testing.T) {
 	reset()
 
-	p1, ok := Provider(ProviderTypeLogger)
+	p1, ok := Provider(provider.TypeLogger)
 	assert.True(t, ok)
 	assert.NotNil(t, p1)
 
-	logger := p1.(logging.LoggingProvider)
+	logger := p1.(provider.LoggingProvider)
 	assert.NotNil(t, logger)
 
-	p2, ok := Provider(ProviderTypeErrorReporter)
+	p2, ok := Provider(provider.TypeErrorReporter)
 	assert.True(t, ok)
 	assert.NotNil(t, p2)
 
-	errorReporter := p2.(errorreporting.ErrorReportingProvider)
+	errorReporter := p2.(provider.ErrorReportingProvider)
 	assert.NotNil(t, errorReporter)
 
-	p3, ok := Provider(ProviderTypeHttpContext)
+	p3, ok := Provider(provider.TypeHttpContext)
 	assert.True(t, ok)
 	assert.NotNil(t, p3)
 
-	httpContext := p3.(http.HttpRequestContextProvider)
+	httpContext := p3.(provider.HttpContextProvider)
 	assert.NotNil(t, httpContext)
 
-	p4, ok := Provider(ProviderTypeMetrics)
+	p4, ok := Provider(provider.TypeMetrics)
 	assert.True(t, ok)
 	assert.NotNil(t, p4)
 
-	metrics := p4.(metrics.MetricsProvider)
+	metrics := p4.(provider.MetricsProvider)
 	assert.NotNil(t, metrics)
 }
 
 func TestGetProviderFailure(t *testing.T) {
-	p1, ok := Provider(ProviderTypeTask)
+	p1, ok := Provider(provider.TypeTask)
 	assert.False(t, ok)
 	assert.Nil(t, p1)
 }
