@@ -40,8 +40,9 @@ func reset() {
 	errorReportingConfig := provider.WithProvider("platform.null.errorreporting", provider.TypeErrorReporter, provider.NewDefaultProvider)
 	contextConfig := provider.WithProvider("platform.null.context", provider.TypeHttpContext, provider.NewDefaultProvider)
 	metricsConfig := provider.WithProvider("platform.null.metrics", provider.TypeMetrics, provider.NewDefaultProvider)
+	authenticationConfig := provider.WithProvider("platform.null.authentication", provider.TypeAuthentication, provider.NewDefaultProvider)
 
-	p, err := InitPlatform(context.Background(), loggingConfig, errorReportingConfig, contextConfig, metricsConfig)
+	p, err := InitPlatform(context.Background(), loggingConfig, errorReportingConfig, contextConfig, metricsConfig, authenticationConfig)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -150,6 +150,13 @@ func TestGetDefaultProviders(t *testing.T) {
 
 	metrics := p4.(provider.MetricsProvider)
 	assert.NotNil(t, metrics)
+
+	p5, ok := Provider(provider.TypeAuthentication)
+	assert.True(t, ok)
+	assert.NotNil(t, p5)
+
+	auth := p5.(provider.AuthenticationProvider)
+	assert.NotNil(t, auth)
 }
 
 func TestGetProviderFailure(t *testing.T) {

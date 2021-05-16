@@ -3,7 +3,8 @@ all: test
 
 .PHONY: test
 test:
-	cd authentication && go test
+	go test
+	cd pkg/authentication && go test
 	cd pkg/account && go test
 	cd pkg/api && go test
 	cd pkg/datastore && go test
@@ -15,7 +16,6 @@ test:
 	cd pkg/validate && go test
 	cd provider/local && go test
 	cd provider/google && go test
-	go test
 
 .PHONY: test_coverage
 test_coverage:

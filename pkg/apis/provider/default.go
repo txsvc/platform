@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	h "net/http"
-
-	"github.com/txsvc/platform/v2/pkg/account"
 )
 
 type (
@@ -24,6 +22,7 @@ var (
 	_ ErrorReportingProvider = (*defaultProviderImpl)(nil)
 	_ LoggingProvider        = (*defaultProviderImpl)(nil)
 	_ MetricsProvider        = (*defaultProviderImpl)(nil)
+	_ AuthenticationProvider = (*defaultProviderImpl)(nil)
 )
 
 // a NULL provider that does nothing but prevents NPEs in case someone forgets to actually initializa a 'real' platform provider
@@ -64,18 +63,18 @@ func (np *defaultProviderImpl) Meter(ctx context.Context, metric string, args ..
 // IF AuthenticationProvider
 
 // AccountChallengeNotification sends a notification to the user promting to confirm the account
-func (a *defaultProviderImpl) AccountChallengeNotification(ctx context.Context, account *account.Account) error {
+func (a *defaultProviderImpl) AccountChallengeNotification(ctx context.Context, realm, userID string) error {
 	return nil
 }
 
 // ProvideAuthorizationToken sends a notification to the user with the current authentication token
-func (a *defaultProviderImpl) ProvideAuthorizationToken(ctx context.Context, account *account.Account) error {
+func (a *defaultProviderImpl) ProvideAuthorizationToken(ctx context.Context, realm, userID, token string) error {
 	return nil
 }
 
-func (a *defaultProviderImpl) Options() *AuthenticationProviderOpts {
-	return &AuthenticationProviderOpts{
-		Scope:                    "",
+func (a *defaultProviderImpl) Options() *AuthenticationProviderConfig {
+	return &AuthenticationProviderConfig{
+		Scope:                    "api:admin,api:read,api:write", // basically root
 		Endpoint:                 "http://localhost:8080",
 		AuthenticationExpiration: 10, // min
 		AuthorizationExpiration:  90, // days

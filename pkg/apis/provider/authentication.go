@@ -2,21 +2,19 @@ package provider
 
 import (
 	"context"
-
-	"github.com/txsvc/platform/v2/pkg/account"
 )
 
 type (
 	AuthenticationProvider interface {
 		// Send an account challenge to confirm the account
-		AccountChallengeNotification(context.Context, *account.Account) error
+		AccountChallengeNotification(context.Context, string, string) error
 		// Send the new token
-		ProvideAuthorizationToken(context.Context, *account.Account) error
+		ProvideAuthorizationToken(context.Context, string, string, string) error
 		// Options returns the provider configuration
-		Options() *AuthenticationProviderOpts
+		Options() *AuthenticationProviderConfig
 	}
 
-	AuthenticationProviderOpts struct {
+	AuthenticationProviderConfig struct {
 		Scope                    string
 		Endpoint                 string
 		AuthenticationExpiration int

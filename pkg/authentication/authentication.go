@@ -36,7 +36,7 @@ const (
 	DefaultAuthorizationExpiration = 90
 
 	// DefaultEndpoint is used to build the urls in the notifications
-	DefaultEndpoint = "http://localhost"
+	DefaultEndpoint = "http://localhost:8080"
 
 	// error messages
 	MsgAuthenticationNotFound = "account '%s' not found"
@@ -65,22 +65,6 @@ type (
 		ClientID string `json:"client_id"`
 		Token    string `json:"token"`
 		Scope    string `json:"scope"`
-	}
-
-	AuthenticationProvider interface {
-		// Send an account challenge to confirm the account
-		AccountChallengeNotification(context.Context, *account.Account) error
-		// Send the new token
-		ProvideAuthorizationToken(context.Context, *account.Account) error
-		// Options returns the provider configuration
-		Options() *AuthenticationProviderOpts
-	}
-
-	AuthenticationProviderOpts struct {
-		Scope                    string
-		Endpoint                 string
-		AuthenticationExpiration int
-		AuthorizationExpiration  int
 	}
 )
 

@@ -48,6 +48,16 @@ func (ath *Authorization) HasAdminScope() bool {
 	return strings.Contains(ath.Scope, ScopeAPIAdmin)
 }
 
+func hasScope(scopes, scope string) bool {
+	// FIXME this is a VERY simple implementation
+	if scopes == "" || scope == "" {
+		return false // empty inputs should never evalute to true
+	}
+
+	// FIXME this is a VERY naiv implementation
+	return strings.Contains(scopes, scope)
+}
+
 // CheckAuthorization relies on the presence of a bearer token and validates the
 // matching authorization against a list of requested scopes. If everything checks
 // out, the function returns the authorization or an error otherwise.
@@ -242,14 +252,4 @@ func nativeKey(key string) *datastore.Key {
 
 func namedKey(part1, part2 string) string {
 	return part1 + "." + part2
-}
-
-func hasScope(scopes, scope string) bool {
-	// FIXME this is a VERY simple implementation
-	if scopes == "" || scope == "" {
-		return false // empty inputs should never evalute to true
-	}
-
-	// FIXME this is a VERY naiv implementation
-	return strings.Contains(scopes, scope)
 }
