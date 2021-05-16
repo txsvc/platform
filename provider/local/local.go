@@ -8,9 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/txsvc/platform/v2"
-	"github.com/txsvc/platform/v2/authentication"
 
-	"github.com/txsvc/platform/v2/pkg/account"
 	"github.com/txsvc/platform/v2/pkg/apis/provider"
 )
 
@@ -26,9 +24,6 @@ type (
 	LocalErrorReportingProviderImpl struct {
 		log *zap.SugaredLogger
 	}
-
-	LocalAuthenticationProviderImpl struct {
-	}
 )
 
 var (
@@ -36,7 +31,6 @@ var (
 	errorReportingConfig provider.ProviderConfig = provider.WithProvider("platform.default.errorreporting", provider.TypeErrorReporter, LocalErrorReportingProvider)
 	contextConfig        provider.ProviderConfig = provider.WithProvider("platform.default.context", provider.TypeHttpContext, LocalHttpContextProvider)
 	metricsConfig        provider.ProviderConfig = provider.WithProvider("platform.default.metrics", provider.TypeMetrics, LocalMetricsProvider)
-	authenticationConfig provider.ProviderConfig = provider.WithProvider("platform.default.authentication", provider.TypeAuthentication, LocalAuthenticationProvider)
 
 	errorReportingClient *LocalErrorReportingProviderImpl
 
@@ -50,9 +44,6 @@ var (
 
 	_ provider.GenericProvider = (*LocalLoggingProviderImpl)(nil)
 	_ provider.LoggingProvider = (*LocalLoggingProviderImpl)(nil)
-
-	_ provider.GenericProvider              = (*LocalAuthenticationProviderImpl)(nil)
-	_ authentication.AuthenticationProvider = (*LocalAuthenticationProviderImpl)(nil)
 )
 
 func init() {
@@ -163,31 +154,4 @@ func (er *LocalErrorReportingProviderImpl) ReportError(e error) {
 
 func (m *LocalProviderImpl) Meter(ctx context.Context, metric string, args ...string) {
 	// actually does nothing right now
-}
-
-func LocalAuthenticationProvider() interface{} {
-	return &LocalAuthenticationProviderImpl{}
-}
-
-func (a *LocalAuthenticationProviderImpl) Close() error {
-	return nil
-}
-
-// AccountChallengeNotification sends a notification to the user promting to confirm the account
-func (a *LocalAuthenticationProviderImpl) AccountChallengeNotification(ctx context.Context, account *account.Account) error {
-	return nil
-}
-
-// ProvideAuthorizationToken sends a notification to the user with the current authentication token
-func (a *LocalAuthenticationProviderImpl) ProvideAuthorizationToken(ctx context.Context, account *account.Account) error {
-	return nil
-}
-
-func (a *LocalAuthenticationProviderImpl) Options() *authentication.AuthenticationProviderOpts {
-	return &authentication.AuthenticationProviderOpts{
-		Scope:                    authentication.DefaultScope,
-		Endpoint:                 authentication.DefaultEndpoint,
-		AuthenticationExpiration: authentication.DefaultAuthenticationExpiration,
-		AuthorizationExpiration:  authentication.DefaultAuthorizationExpiration,
-	}
 }

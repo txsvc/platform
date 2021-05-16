@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/txsvc/platform/v2"
-	"github.com/txsvc/platform/v2/authentication"
 	"github.com/txsvc/platform/v2/pkg/apis/provider"
 )
 
@@ -96,6 +95,7 @@ func TestMetricsProvider(t *testing.T) {
 	assert.NotNil(t, metrics)
 }
 
+/*
 func TestAuthenticationProvider(t *testing.T) {
 	InitLocalProviders()
 	platform.DefaultPlatform().RegisterProviders(false, authenticationConfig)
@@ -109,3 +109,4 @@ func TestAuthenticationProvider(t *testing.T) {
 
 	assert.NotEmpty(t, auth.Options())
 }
+*/
