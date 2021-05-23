@@ -161,6 +161,45 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 
 	token := c.Param("token")
 	if token == "" {
+		return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/error", authenticationProvider().Options().Endpoint))
+		//return api.ErrorResponse(c, http.StatusBadRequest, ErrInvalidRoute)
+	}
+
+	acc, status, _ := ConfirmLoginChallenge(ctx, token)
+	if status != http.StatusNoContent {
+		return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/error?s=%d", authenticationProvider().Options().Endpoint, status))
+		//return api.ErrorResponse(c, status, err)
+	}
+
+	acc, err := account.ResetTemporaryToken(ctx, acc, authenticationProvider().Options().AuthenticationExpiration)
+	if err != nil {
+		return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/internal", authenticationProvider().Options().Endpoint))
+		//return api.ErrorResponse(c, http.StatusInternalServerError, err)
+	}
+
+	err = authenticationProvider().ProvideAuthorizationToken(ctx, acc.Realm, acc.UserID, acc.Token)
+	if err != nil {
+		return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/internal", authenticationProvider().Options().Endpoint))
+		//return api.ErrorResponse(c, http.StatusInternalServerError, err)
+	}
+
+	// status 307: account is confirmed, email with auth token sent, redirect now
+	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", authenticationProvider().Options().Endpoint))
+}
+
+// ClientLoginConfirmationEndpoint validates an email.
+//
+// GET /login/:token
+// status 201: account is confirmed, no redirect as this is meant to be called from e.g. the CLI
+// status 400: the request could not be understood by the server due to malformed syntax
+// status 401: token is wrong
+// status 403: token is expired or has already been used
+// status 404: token was not found
+func ClientLoginConfirmationEndpoint(c echo.Context) error {
+	ctx := platform.NewHttpContext(c.Request())
+
+	token := c.Param("token")
+	if token == "" {
 		return api.ErrorResponse(c, http.StatusBadRequest, ErrInvalidRoute)
 	}
 
@@ -179,8 +218,8 @@ func LoginConfirmationEndpoint(c echo.Context) error {
 		return api.ErrorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	// status 307: account is confirmed, email with auth token sent, redirect now
-	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/confirmed", authenticationProvider().Options().Endpoint))
+	// status 201: account is confirmed, email with auth token sent, redirect now
+	return c.NoContent(http.StatusCreated)
 }
 
 // GetAuthorizationEndpoint exchanges a temporary confirmation token for a 'real' token.
