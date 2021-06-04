@@ -15,6 +15,16 @@ const (
 	AssertionWarning = 0
 	// AssertionError indicates an error in the validation
 	AssertionError = 1
+
+	MsgStringMismatch      = "expected '%s', found '%s'"
+	MsgNonEmptyString      = "expected non empty string '%s'"
+	MsgNotNil              = "expected not-nil attribute, got '%s'"
+	MsgNonZero             = "expected non-zero value '%s'"
+	MsgInvalidLanguageCode = "invalid language code '%s'"
+	MsgInvalidTimestamp    = "invalid timestamp '%d'"
+	MsgNonEmptyMap         = "expected none empty map '%s'"
+	MsgExpectedKey         = "expected key '%s' in map '%s'"
+	MsgEmptyReport         = "validation '%s' has zero errors/warnings"
 )
 
 type (
@@ -68,33 +78,33 @@ func (v *Validator) AddWarning(txt string) {
 // StringEquals verifies a string
 func (v *Validator) StringEquals(src, expected string) {
 	if len(src) != len(expected) {
-		v.AddError(fmt.Sprintf("Expected '%s', found '%s'", expected, src))
+		v.AddError(fmt.Sprintf(MsgStringMismatch, expected, src))
 		return
 	}
 
 	if src != expected {
-		v.AddError(fmt.Sprintf("Expected '%s', found '%s'", expected, src))
+		v.AddError(fmt.Sprintf(MsgStringMismatch, expected, src))
 	}
 }
 
 // StringNotEmpty verifies a string is not empty
 func (v *Validator) StringNotEmpty(src, name string) {
 	if len(src) == 0 {
-		v.AddError(fmt.Sprintf("Expected non empty attribute '%s'", name))
+		v.AddError(fmt.Sprintf(MsgNonEmptyString, name))
 	}
 }
 
 // NotNil verifies that an attribute is not nil
 func (v *Validator) NotNil(src interface{}) {
 	if src == nil || (reflect.ValueOf(src).Kind() == reflect.Ptr && reflect.ValueOf(src).IsNil()) {
-		v.AddError(fmt.Sprintf("Expected non-nil attribute, got '%s'", reflect.TypeOf(src).String()))
+		v.AddError(fmt.Sprintf(MsgNotNil, reflect.TypeOf(src).String()))
 	}
 }
 
 // NonZero verifies that a map is not empty
 func (v *Validator) NonZero(src int, name string) {
 	if src == 0 {
-		v.AddError(fmt.Sprintf("Expected no-zero attribute '%s'", name))
+		v.AddError(fmt.Sprintf(MsgNonZero, name))
 	}
 }
 
@@ -105,7 +115,7 @@ func (v *Validator) ISO639(src string) {
 		lang = src + "_" + strings.ToUpper(src)
 	}
 	if !langreg.IsValidLangRegCode(lang) {
-		v.AddError(fmt.Sprintf("Invalid language code '%s'", src))
+		v.AddError(fmt.Sprintf(MsgInvalidLanguageCode, src))
 	}
 }
 
@@ -124,25 +134,25 @@ func (v *Validator) Timestamp(src string) {
 		v.AddError(err.Error())
 	}
 	if ts < 0 {
-		v.AddError(fmt.Sprintf("invalid timestamp '%d'", ts))
+		v.AddError(fmt.Sprintf(MsgInvalidTimestamp, ts))
 	}
 }
 
 // MapNotEmpty verifies that a map is not empty
 func (v *Validator) MapNotEmpty(src map[string]string, name string) {
 	if len(src) == 0 {
-		v.AddError(fmt.Sprintf("Expected none empty map '%s'", name))
+		v.AddError(fmt.Sprintf(MsgNonEmptyMap, name))
 	}
 }
 
 // MapContains verifies that a map contains key
 func (v *Validator) MapContains(src map[string]string, key, name string) {
 	if len(src) == 0 {
-		v.AddError(fmt.Sprintf("Expected none empty map '%s'", name))
+		v.AddError(fmt.Sprintf(MsgNonEmptyMap, name))
 		return
 	}
 	if _, ok := src[key]; !ok {
-		v.AddError(fmt.Sprintf("Expected key '%s' in map '%s'", key, name))
+		v.AddError(fmt.Sprintf(MsgExpectedKey, key, name))
 	}
 }
 
@@ -182,11 +192,11 @@ func (v *Validator) Error() string {
 // Report returns a description of all issues
 func (v *Validator) Report() string {
 	if v.Errors == 0 {
-		return fmt.Sprintf("validation '%s' has zero errors/warnings", v.Name)
+		return fmt.Sprintf(MsgEmptyReport, v.Name)
 	}
 	r := "\n"
 	for i, issue := range v.Issues {
-		r = r + fmt.Sprintf("issue %d: %s\n", i+1, issue.Txt)
+		r = r + fmt.Sprintf("issue-%d: %s\n", i+1, issue.Txt)
 	}
 	return r
 }
