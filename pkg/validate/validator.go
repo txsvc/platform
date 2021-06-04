@@ -2,7 +2,10 @@ package validate
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/johngb/langreg"
 )
@@ -50,84 +53,96 @@ func (v *Validator) Validate(src Validatable) *Validator {
 	return src.Validate(v)
 }
 
-// AssertError add an error assertion
-func (v *Validator) AssertError(txt string) {
+// AddError adds an error assertion
+func (v *Validator) AddError(txt string) {
 	v.Issues = append(v.Issues, &Assertion{Type: AssertionError, Txt: txt})
 	v.Errors++
 }
 
-// AssertWarning add an warning assertion
-func (v *Validator) AssertWarning(txt string) {
+// AddWarning adds an warning assertion
+func (v *Validator) AddWarning(txt string) {
 	v.Issues = append(v.Issues, &Assertion{Type: AssertionWarning, Txt: txt})
 	v.Errors++
 }
 
-// AssertStringError verifies a string
-func (v *Validator) AssertStringError(src, expected string) {
+// StringEquals verifies a string
+func (v *Validator) StringEquals(src, expected string) {
 	if len(src) != len(expected) {
-		v.AssertError(fmt.Sprintf("Expected '%s', found '%s'", expected, src))
+		v.AddError(fmt.Sprintf("Expected '%s', found '%s'", expected, src))
 		return
 	}
 
 	if src != expected {
-		v.AssertError(fmt.Sprintf("Expected '%s', found '%s'", expected, src))
+		v.AddError(fmt.Sprintf("Expected '%s', found '%s'", expected, src))
 	}
 }
 
-// AssertStringExists verifies a string is not empty
-func (v *Validator) AssertStringExists(src, name string) {
+// StringNotEmpty verifies a string is not empty
+func (v *Validator) StringNotEmpty(src, name string) {
 	if len(src) == 0 {
-		v.AssertError(fmt.Sprintf("Expected non empty attribute '%s'", name))
+		v.AddError(fmt.Sprintf("Expected non empty attribute '%s'", name))
 	}
 }
 
-// AssertNotNil verifies that an attribute is not nil
-func (v *Validator) AssertNotNil(src interface{}, name string) {
-	if src == nil {
-		v.AssertError(fmt.Sprintf("Expected no nil attribute '%s'", name))
+// NotNil verifies that an attribute is not nil
+func (v *Validator) NotNil(src interface{}) {
+	if src == nil || (reflect.ValueOf(src).Kind() == reflect.Ptr && reflect.ValueOf(src).IsNil()) {
+		v.AddError(fmt.Sprintf("Expected non-nil attribute, got '%s'", reflect.TypeOf(src).String()))
 	}
 }
 
-// AssertNotEmpty verifies that a map is not empty
-func (v *Validator) AssertNotEmpty(src map[string]string, name string) {
-	if len(src) == 0 {
-		v.AssertError(fmt.Sprintf("Expected none empty map '%s'", name))
-	}
-}
-
-// AssertNotZero verifies that a map is not empty
-func (v *Validator) AssertNotZero(src int, name string) {
+// NonZero verifies that a map is not empty
+func (v *Validator) NonZero(src int, name string) {
 	if src == 0 {
-		v.AssertError(fmt.Sprintf("Expected no-zero attribute '%s'", name))
+		v.AddError(fmt.Sprintf("Expected no-zero attribute '%s'", name))
 	}
 }
 
-// AssertISO639 verifies that src complies with ISO 639-1
-func (v *Validator) AssertISO639(src string) {
+// ISO639 verifies that src complies with ISO 639-1
+func (v *Validator) ISO639(src string) {
 	lang := src
 	if !strings.Contains(src, "_") {
 		lang = src + "_" + strings.ToUpper(src)
 	}
 	if !langreg.IsValidLangRegCode(lang) {
-		v.AssertError(fmt.Sprintf("Invalid language code '%s'", src))
+		v.AddError(fmt.Sprintf("Invalid language code '%s'", src))
 	}
 }
 
-// AssertContains verifies that a map contains key
-func (v *Validator) AssertContains(src map[string]string, key, name string) {
+// RFC1123Z verifies that src complies with RFC 1123-Z
+func (v *Validator) RFC1123Z(src string) {
+	_, err := time.Parse(time.RFC1123Z, src)
+	if err != nil {
+		v.AddError(err.Error())
+	}
+}
+
+// Timestamp validates that src is a valid UNIX timestamp
+func (v *Validator) Timestamp(src string) {
+	ts, err := strconv.Atoi(src)
+	if err != nil {
+		v.AddError(err.Error())
+	}
+	if ts < 0 {
+		v.AddError(fmt.Sprintf("invalid timestamp '%d'", ts))
+	}
+}
+
+// MapNotEmpty verifies that a map is not empty
+func (v *Validator) MapNotEmpty(src map[string]string, name string) {
 	if len(src) == 0 {
-		v.AssertError(fmt.Sprintf("Expected none empty map '%s'", name))
+		v.AddError(fmt.Sprintf("Expected none empty map '%s'", name))
+	}
+}
+
+// MapContains verifies that a map contains key
+func (v *Validator) MapContains(src map[string]string, key, name string) {
+	if len(src) == 0 {
+		v.AddError(fmt.Sprintf("Expected none empty map '%s'", name))
 		return
 	}
 	if _, ok := src[key]; !ok {
-		v.AssertError(fmt.Sprintf("Expected key '%s' in map '%s'", key, name))
-	}
-}
-
-// AssertExistsError verifies that a struct exists
-func (v *Validator) AssertExistsError(src interface{}, expected string) {
-	if src == nil {
-		v.AssertError(fmt.Sprintf("Expected '%s', found 'nil'", expected))
+		v.AddError(fmt.Sprintf("Expected key '%s' in map '%s'", key, name))
 	}
 }
 
@@ -161,18 +176,17 @@ func (v *Validator) AsError() error {
 
 // Error returns an error text
 func (v *Validator) Error() string {
-	//return fmt.Sprintf("validation '%s' has %d errors, %d warnings", v.Name, v.Errors, v.Warnings)
 	return v.Report()
 }
 
 // Report returns a description of all issues
 func (v *Validator) Report() string {
 	if v.Errors == 0 {
-		return "validation '%s' has zero errors/warnings"
+		return fmt.Sprintf("validation '%s' has zero errors/warnings", v.Name)
 	}
 	r := "\n"
 	for i, issue := range v.Issues {
-		r = r + fmt.Sprintf("Issue %d: %s\n", i+1, issue.Txt)
+		r = r + fmt.Sprintf("issue %d: %s\n", i+1, issue.Txt)
 	}
 	return r
 }

@@ -16,3 +16,10 @@ func TestEmpty(t *testing.T) {
 	assert.False(t, NotEmpty(""))
 	assert.False(t, NotEmpty("a", "", "c"))
 }
+
+func TestIsMemberOf(t *testing.T) {
+	assert.True(t, IsMemberOf("ab", "a", "b", "ab", "aa"))
+
+	assert.False(t, IsMemberOf("a"))
+	assert.False(t, IsMemberOf("bb", "a", "b", "ab", "aa"))
+}
